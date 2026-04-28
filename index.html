@@ -231,7 +231,7 @@ function CampaignCard({ campaign, compact=false, onClick }) {
           </div>
         )}
       </div>
-      {hov && !isDragging && (
+      {hov && !isDragging && ReactDOM.createPortal(
         <div style={{
           position:'fixed',top:tipPos.top,left:Math.min(tipPos.left,window.innerWidth-220),
           width:210,background:'white',border:'1px solid #e5e7eb',borderRadius:8,
@@ -248,7 +248,8 @@ function CampaignCard({ campaign, compact=false, onClick }) {
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v4l2.5 2.5" stroke="#9ca3af" strokeWidth="1.3" strokeLinecap="round"/><circle cx="5" cy="5" r="4" stroke="#9ca3af" strokeWidth="1.1" fill="none"/></svg>
             Drag to reschedule
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -292,9 +293,9 @@ function DropCell({ date, children, onDrop, style, className, onMouseEnter, onMo
   );
 }
 
-// ── Shared campaign tooltip ───────────────────────────────────
+// ── Shared campaign tooltip (portal — escapes all stacking contexts) ─
 function CampaignTooltip({ campaign, tipPos }) {
-  return (
+  return ReactDOM.createPortal(
     <div style={{
       position:'fixed',top:tipPos.top,left:Math.min(tipPos.left,window.innerWidth-220),
       width:210,background:'white',border:'1px solid #e5e7eb',borderRadius:8,
@@ -307,7 +308,8 @@ function CampaignTooltip({ campaign, tipPos }) {
           <span style={{fontSize:11,color:'#374151',fontWeight:500}}>{v}</span>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -371,11 +373,13 @@ function SpanBar({ campaign, fullWidth, onCampaignClick, weekDays, numCols, onRe
         className={isDragging?'card-dragging':''}
         style={{
           position:'absolute',left:0,top:0,width:'100%',height:22,
-          background:hov&&!isDragging?cc.border:cc.bg,
+          background:cc.bg,
           borderTop:`1.5px solid ${cc.border}`, borderBottom:`1.5px solid ${cc.border}`,
           borderLeft:`4px solid ${cc.border}`, borderRight:`4px solid ${cc.border}`,
           borderRadius:4, display:'flex',alignItems:'center',gap:5,padding:'0 10px',
-          cursor:'grab',transition:'background 0.15s',overflow:'hidden',zIndex:10,userSelect:'none',
+          cursor:'grab',transition:'box-shadow 0.15s, transform 0.1s, opacity 0.15s',overflow:'hidden',zIndex:10,userSelect:'none',
+          boxShadow:hov&&!isDragging?'0 2px 8px rgba(0,0,0,0.10)':'none',
+          transform:hov&&!isDragging?'translateY(-1px)':'none',
         }}>
         <ChannelIcon channel={campaign.channel} size={11} color={cc.text}/>
         <span style={{fontSize:11,fontWeight:600,color:cc.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{campaign.name}</span>
@@ -835,7 +839,7 @@ function MonthSpanBar({ campaign, isStart, isEnd, onCampaignClick, week, onResiz
       style={{
         position:'absolute', top:0, bottom:0,
         left: isStart ? 3 : 0, right: isEnd ? 3 : 0,
-        background: hov&&!isDragging ? cc.border : cc.bg,
+        background: cc.bg,
         borderTop:`1.5px solid ${cc.border}`,
         borderBottom:`1.5px solid ${cc.border}`,
         borderLeft: isStart ? `4px solid ${cc.border}` : 'none',
@@ -845,8 +849,10 @@ function MonthSpanBar({ campaign, isStart, isEnd, onCampaignClick, week, onResiz
         borderTopRightRadius: isEnd ? 4 : 0,
         borderBottomRightRadius: isEnd ? 4 : 0,
         display:'flex', alignItems:'center', gap:4, padding:'0 8px',
-        cursor:'grab', overflow:'hidden', transition:'background 0.15s',
+        cursor:'grab', overflow:'hidden', transition:'box-shadow 0.15s, transform 0.1s, opacity 0.15s',
         userSelect:'none',
+        boxShadow:hov&&!isDragging?'0 2px 8px rgba(0,0,0,0.10)':'none',
+        transform:hov&&!isDragging?'translateY(-1px)':'none',
       }}>
       {isStart && (
         <>

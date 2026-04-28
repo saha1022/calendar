@@ -371,11 +371,13 @@ function SpanBar({ campaign, fullWidth, onCampaignClick, weekDays, numCols, onRe
         className={isDragging?'card-dragging':''}
         style={{
           position:'absolute',left:0,top:0,width:'100%',height:22,
-          background:hov&&!isDragging?cc.border:cc.bg,
+          background:cc.bg,
           borderTop:`1.5px solid ${cc.border}`, borderBottom:`1.5px solid ${cc.border}`,
           borderLeft:`4px solid ${cc.border}`, borderRight:`4px solid ${cc.border}`,
           borderRadius:4, display:'flex',alignItems:'center',gap:5,padding:'0 10px',
-          cursor:'grab',transition:'background 0.15s',overflow:'hidden',zIndex:10,userSelect:'none',
+          cursor:'grab',transition:'box-shadow 0.15s, transform 0.1s, opacity 0.15s',overflow:'hidden',zIndex:10,userSelect:'none',
+          boxShadow:hov&&!isDragging?'0 2px 8px rgba(0,0,0,0.10)':'none',
+          transform:hov&&!isDragging?'translateY(-1px)':'none',
         }}>
         <ChannelIcon channel={campaign.channel} size={11} color={cc.text}/>
         <span style={{fontSize:11,fontWeight:600,color:cc.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{campaign.name}</span>
@@ -835,7 +837,7 @@ function MonthSpanBar({ campaign, isStart, isEnd, onCampaignClick, week, onResiz
       style={{
         position:'absolute', top:0, bottom:0,
         left: isStart ? 3 : 0, right: isEnd ? 3 : 0,
-        background: hov&&!isDragging ? cc.border : cc.bg,
+        background: cc.bg,
         borderTop:`1.5px solid ${cc.border}`,
         borderBottom:`1.5px solid ${cc.border}`,
         borderLeft: isStart ? `4px solid ${cc.border}` : 'none',
@@ -845,8 +847,10 @@ function MonthSpanBar({ campaign, isStart, isEnd, onCampaignClick, week, onResiz
         borderTopRightRadius: isEnd ? 4 : 0,
         borderBottomRightRadius: isEnd ? 4 : 0,
         display:'flex', alignItems:'center', gap:4, padding:'0 8px',
-        cursor:'grab', overflow:'hidden', transition:'background 0.15s',
+        cursor:'grab', overflow:'hidden', transition:'box-shadow 0.15s, transform 0.1s, opacity 0.15s',
         userSelect:'none',
+        boxShadow:hov&&!isDragging?'0 2px 8px rgba(0,0,0,0.10)':'none',
+        transform:hov&&!isDragging?'translateY(-1px)':'none',
       }}>
       {isStart && (
         <>

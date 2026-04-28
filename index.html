@@ -93,38 +93,39 @@ const STATUSES = {
 };
 
 // Card colors by status (bg, border, text, dot)
+// bg = main color at 15% opacity (#__26), border/dot = main color, text = dark variant
 const STATUS_CARD_COLORS = {
-  // Gray group — no fill
-  draft:     { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
-  inactive:  { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
-  reviewing: { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
-  paused:    { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
-  archived:  { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
-  testing:   { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
-  stopped:   { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  // Gray group — draft / inactive / reviewing / paused / testing / stopped
+  draft:     { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
+  inactive:  { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
+  reviewing: { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
+  paused:    { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
+  archived:  { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
+  testing:   { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
+  stopped:   { bg:'#80849C26', border:'#80849C', text:'#4B5068', dot:'#80849C' },
   // Cyan — Scheduled
-  scheduled: { bg:'#e0f7fa', border:'#4dd0e1', text:'#006064', dot:'#00bcd4' },
+  scheduled: { bg:'#00AEE626', border:'#00AEE6', text:'#0077A0', dot:'#00AEE6' },
   // Green — Active
-  active:    { bg:'#e8f5e9', border:'#81c784', text:'#1b5e20', dot:'#4caf50' },
-  // Indigo/violet — Completed
-  completed: { bg:'#e8f0ff', border:'#a3bfff', text:'#1a4ecc', dot:'#296AFF' },
-  // Pink — Rejected
-  rejected:  { bg:'#fce4ec', border:'#f48fb1', text:'#880e4f', dot:'#e91e63' },
+  active:    { bg:'#00BA7726', border:'#00BA77', text:'#006B45', dot:'#00BA77' },
+  // Purple — Completed
+  completed: { bg:'#864CFF26', border:'#864CFF', text:'#5B21B6', dot:'#864CFF' },
+  // Red/pink — Rejected
+  rejected:  { bg:'#FB407826', border:'#FB4078', text:'#BE1045', dot:'#FB4078' },
 };
 
 // Badge colors (small status pill)
 const STATUS_BADGE = {
-  scheduled: { bg:'#e0f7fa', text:'#006064' },
-  active:    { bg:'#e8f5e9', text:'#1b5e20' },
-  completed: { bg:'#e8f0ff', text:'#1a4ecc' },
-  rejected:  { bg:'#fce4ec', text:'#880e4f' },
-  draft:     { bg:'#f3f4f6', text:'#6b7280' },
-  inactive:  { bg:'#f3f4f6', text:'#6b7280' },
-  reviewing: { bg:'#f3f4f6', text:'#6b7280' },
-  paused:    { bg:'#f3f4f6', text:'#6b7280' },
-  archived:  { bg:'#f3f4f6', text:'#6b7280' },
-  testing:   { bg:'#f3f4f6', text:'#6b7280' },
-  stopped:   { bg:'#f3f4f6', text:'#6b7280' },
+  scheduled: { bg:'#00AEE626', text:'#0077A0' },
+  active:    { bg:'#00BA7726', text:'#006B45' },
+  completed: { bg:'#864CFF26', text:'#5B21B6' },
+  rejected:  { bg:'#FB407826', text:'#BE1045' },
+  draft:     { bg:'#80849C26', text:'#4B5068' },
+  inactive:  { bg:'#80849C26', text:'#4B5068' },
+  reviewing: { bg:'#80849C26', text:'#4B5068' },
+  paused:    { bg:'#80849C26', text:'#4B5068' },
+  archived:  { bg:'#80849C26', text:'#4B5068' },
+  testing:   { bg:'#80849C26', text:'#4B5068' },
+  stopped:   { bg:'#80849C26', text:'#4B5068' },
 };
 
 // Keep channel colors for icons only (not card bg)

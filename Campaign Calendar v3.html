@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Campaign Calendar – AIQUA</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<template id="__bundler_thumbnail" data-bg-color="#1e2340">
+  <svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="80" fill="#1e2340"/>
+    <!-- Calendar grid -->
+    <rect x="10" y="18" width="100" height="54" rx="4" fill="#ffffff" opacity="0.06"/>
+    <!-- Header row -->
+    <rect x="10" y="18" width="100" height="12" rx="4" fill="#4f46e5" opacity="0.5"/>
+    <!-- Day cols -->
+    <rect x="10" y="30" width="14" height="42" rx="0" fill="#ffffff" opacity="0.03"/>
+    <rect x="25" y="30" width="14" height="42" rx="0" fill="#4f46e5" opacity="0.06"/>
+    <!-- Campaign bars -->
+    <rect x="12" y="34" width="9" height="5" rx="1.5" fill="#a78bfa" opacity="0.8"/>
+    <rect x="12" y="42" width="9" height="5" rx="1.5" fill="#93c5fd" opacity="0.8"/>
+    <rect x="12" y="50" width="9" height="5" rx="1.5" fill="#86efac" opacity="0.8"/>
+    <rect x="27" y="34" width="9" height="5" rx="1.5" fill="#93c5fd" opacity="0.8"/>
+    <rect x="27" y="42" width="9" height="5" rx="1.5" fill="#f9a8d4" opacity="0.8"/>
+    <rect x="42" y="34" width="9" height="5" rx="1.5" fill="#a78bfa" opacity="0.8"/>
+    <rect x="57" y="34" width="9" height="5" rx="1.5" fill="#86efac" opacity="0.8"/>
+    <rect x="57" y="42" width="9" height="5" rx="1.5" fill="#93c5fd" opacity="0.8"/>
+    <rect x="72" y="34" width="9" height="5" rx="1.5" fill="#f9a8d4" opacity="0.8"/>
+    <!-- AIQUA label -->
+    <text x="10" y="13" fill="white" fontFamily="sans-serif" fontWeight="700" fontSize="7" letterSpacing="0.5">AIQUA</text>
+  </svg>
+</template>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body { font-family: 'Inter', sans-serif; background: #f4f5f9; color: #1e2340; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+  .drop-zone-active {
+    background: #ede9fe !important;
+    outline: 2px dashed #a78bfa !important;
+    outline-offset: -2px;
+  }
+  .card-dragging { opacity: 0.35 !important; transform: scale(0.96) !important; }
+
+  .tweaks-panel {
+    position: fixed; bottom: 24px; right: 24px; width: 240px;
+    background: white; border: 1px solid #e5e7eb; border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12); padding: 16px; z-index: 9999;
+    display: none;
+  }
+  .tweaks-panel.open { display: block; }
+  .tweaks-panel h4 { font-size: 13px; font-weight: 600; color: #6b7280; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+  .tweak-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 13px; }
+  .tweak-row label { color: #374151; }
+  .tweak-select { font-size: 12px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 3px 6px; background: white; cursor: pointer; }
+  .tweak-toggle { width: 34px; height: 18px; background: #d1d5db; border-radius: 9px; cursor: pointer; position: relative; transition: background 0.2s; }
+  .tweak-toggle.on { background: #4f46e5; }
+  .tweak-toggle::after { content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; background:white; border-radius:50%; transition: left 0.2s; }
+  .tweak-toggle.on::after { left: 18px; }
+
+  @keyframes toast-in { from { opacity:0; transform: translateY(12px) scale(0.96); } to { opacity:1; transform: none; } }
+  @keyframes toast-out { to { opacity:0; transform: translateY(-8px) scale(0.96); } }
+  .toast { animation: toast-in 0.22s ease forwards; }
+  .toast.out { animation: toast-out 0.22s ease forwards; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useRef, useEffect, useCallback, createContext, useContext } = React;
+
+const NAVY        = '#1e2340';
+const INDIGO      = '#4f46e5';
+const INDIGO_LIGHT= '#ede9fe';
+const INDIGO_MID  = '#c4b5fd';
+
+const CHANNELS = { sms:'SMS', email:'Email', push:'Push', inapp:'In-App' };
+
+// Full status set
+const STATUSES = {
+  draft:'Draft', inactive:'Inactive', reviewing:'Reviewing',
+  paused:'Paused', archived:'Archived', testing:'Testing',
+  scheduled:'Scheduled', active:'Active',
+  completed:'Completed', rejected:'Rejected',
+  stopped:'Stopped', // legacy alias → inactive style
+};
+
+// Card colors by status (bg, border, text, dot)
+const STATUS_CARD_COLORS = {
+  // Gray group — no fill
+  draft:     { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  inactive:  { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  reviewing: { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  paused:    { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  archived:  { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  testing:   { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  stopped:   { bg:'#f3f4f6', border:'#d1d5db', text:'#374151', dot:'#9ca3af' },
+  // Cyan — Scheduled
+  scheduled: { bg:'#e0f7fa', border:'#4dd0e1', text:'#006064', dot:'#00bcd4' },
+  // Green — Active
+  active:    { bg:'#e8f5e9', border:'#81c784', text:'#1b5e20', dot:'#4caf50' },
+  // Indigo/violet — Completed
+  completed: { bg:'#ede9fe', border:'#c4b5fd', text:'#5b21b6', dot:'#7c3aed' },
+  // Pink — Rejected
+  rejected:  { bg:'#fce4ec', border:'#f48fb1', text:'#880e4f', dot:'#e91e63' },
+};
+
+// Badge colors (small status pill)
+const STATUS_BADGE = {
+  scheduled: { bg:'#e0f7fa', text:'#006064' },
+  active:    { bg:'#e8f5e9', text:'#1b5e20' },
+  completed: { bg:'#ede9fe', text:'#5b21b6' },
+  rejected:  { bg:'#fce4ec', text:'#880e4f' },
+  draft:     { bg:'#f3f4f6', text:'#6b7280' },
+  inactive:  { bg:'#f3f4f6', text:'#6b7280' },
+  reviewing: { bg:'#f3f4f6', text:'#6b7280' },
+  paused:    { bg:'#f3f4f6', text:'#6b7280' },
+  archived:  { bg:'#f3f4f6', text:'#6b7280' },
+  testing:   { bg:'#f3f4f6', text:'#6b7280' },
+  stopped:   { bg:'#f3f4f6', text:'#6b7280' },
+};
+
+// Keep channel colors for icons only (not card bg)
+const CHANNEL_COLORS = {
+  sms:   { bg:'#ede9fe', border:'#a78bfa', text:'#5b21b6' },
+  email: { bg:'#dbeafe', border:'#93c5fd', text:'#1d4ed8' },
+  push:  { bg:'#dcfce7', border:'#86efac', text:'#15803d' },
+  inapp: { bg:'#fce7f3', border:'#f9a8d4', text:'#be185d' },
+};
+
+function makeDate(y,m,d){ return new Date(y,m-1,d); }
+function fmtDate(d){ return d.toISOString().slice(0,10); }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function sameDay(a,b){ return fmtDate(a)===fmtDate(b); }
+
+const INIT_CAMPAIGNS = [
+  { id:1,  name:'Blue Monday sales',         channel:'email', status:'completed', type:'Recurring',   segment:'All users',   startDate:makeDate(2025,1,28), endDate:makeDate(2025,2,4),  time:'09:00 AM', allDay:true  },
+  { id:2,  name:'New year sales',            channel:'sms',   status:'stopped',   type:'Manual sent', segment:'VIP',         startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'10:30 AM', allDay:false },
+  { id:3,  name:'New year sales',            channel:'sms',   status:'reviewing', type:'Manual sent', segment:'VIP',         startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'10:30 AM', allDay:false },
+  { id:4,  name:'New year sales',            channel:'sms',   status:'active',    type:'Manual sent', segment:'New users',   startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'11:00 AM', allDay:false },
+  { id:5,  name:'New year sales',            channel:'sms',   status:'draft',     type:'Manual sent', segment:'VIP',         startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'04:30 PM', allDay:false },
+  { id:6,  name:'Drive daily re-engagement', channel:'push',  status:'scheduled', type:'Automated',   segment:'Dormant',     startDate:makeDate(2025,1,30), endDate:makeDate(2025,2,1),  time:'10:30 AM', allDay:false },
+  { id:7,  name:'New year sales',            channel:'sms',   status:'paused',    type:'Manual sent', segment:'All',         startDate:makeDate(2025,2,2),  endDate:makeDate(2025,2,2),  time:'10:30 AM', allDay:false },
+  { id:8,  name:'Valentine prep',            channel:'email', status:'draft',     type:'Scheduled',   segment:'All users',   startDate:makeDate(2025,2,3),  endDate:makeDate(2025,2,3),  time:'08:00 AM', allDay:false },
+  { id:9,  name:'Re-engage dormant',         channel:'push',  status:'active',    type:'Automated',   segment:'Dormant',     startDate:makeDate(2025,2,1),  endDate:makeDate(2025,2,5),  time:'03:00 PM', allDay:true  },
+  { id:10, name:'Loyalty points reminder',   channel:'inapp', status:'scheduled', type:'Automated',   segment:'Loyalty',     startDate:makeDate(2025,2,3),  endDate:makeDate(2025,2,3),  time:'12:00 PM', allDay:false },
+  { id:11, name:'Flash sale weekend',        channel:'sms',   status:'rejected',  type:'Manual sent', segment:'All',         startDate:makeDate(2025,2,4),  endDate:makeDate(2025,2,5),  time:'10:00 AM', allDay:false },
+  { id:12, name:'App review prompt',         channel:'inapp', status:'testing',   type:'Triggered',   segment:'Power users', startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'02:00 PM', allDay:false },
+  { id:20, name:'Spring campaign draft',     channel:'email', status:'draft',     type:'Manual sent', segment:'All',         unscheduled:true },
+  { id:21, name:'Birthday flow',             channel:'sms',   status:'draft',     type:'Automated',   segment:'VIP',         unscheduled:true },
+  { id:22, name:'Win-back sequence',         channel:'push',  status:'draft',     type:'Automated',   segment:'Churned',     unscheduled:true },
+  { id:23, name:'Product launch teaser',     channel:'email', status:'draft',     type:'Scheduled',   segment:'All',         unscheduled:true },
+  { id:24, name:'Referral incentive',        channel:'inapp', status:'draft',     type:'Triggered',   segment:'Power users', unscheduled:true },
+  { id:25, name:'Churn prevention',          channel:'sms',   status:'draft',     type:'Automated',   segment:'At-risk',     unscheduled:true },
+  { id:26, name:'Upsell premium tier',       channel:'email', status:'draft',     type:'Manual sent', segment:'Free users',  unscheduled:true },
+];
+
+// ── Drag context ─────────────────────────────────────────────
+const DragCtx = createContext(null);
+
+// ── Channel icon ─────────────────────────────────────────────
+function ChannelIcon({ channel, size=12, color }) {
+  const c = color || CHANNEL_COLORS[channel]?.text || '#6b7280';
+  if (channel==='sms') return <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d="M2 2h12a1 1 0 011 1v8a1 1 0 01-1 1H5l-3 3V3a1 1 0 011-1z" fill={c}/></svg>;
+  if (channel==='email') return <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" fill={c}/><path d="M1 4.5l7 5 7-5" stroke="white" strokeWidth="1.2" fill="none"/></svg>;
+  if (channel==='push') return <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><path d="M8 1a1 1 0 011 1v.5A4.5 4.5 0 0113.5 7v3l1 2H1.5l1-2V7A4.5 4.5 0 016 2.5V2a1 1 0 011-1z" fill={c}/><path d="M6.5 12.5a1.5 1.5 0 003 0" stroke={c} strokeWidth="1.2" fill="none"/></svg>;
+  if (channel==='inapp') return <svg width={size} height={size} viewBox="0 0 16 16" fill="none"><rect x="2" y="1" width="12" height="14" rx="2" fill={c}/><rect x="5" y="5" width="6" height="1.5" rx=".75" fill="white"/><rect x="5" y="8" width="4" height="1.5" rx=".75" fill="white"/></svg>;
+  return null;
+}
+
+// ── Campaign card ────────────────────────────────────────────
+function CampaignCard({ campaign, compact=false, onClick }) {
+  const { dragId, setDragId } = useContext(DragCtx);
+  const [hov, setHov] = useState(false);
+  const ref = useRef(null);
+  const [tipPos, setTipPos] = useState({top:0,left:0});
+  const sc = STATUS_CARD_COLORS[campaign.status] || STATUS_CARD_COLORS.draft;
+  const badge = STATUS_BADGE[campaign.status] || STATUS_BADGE.draft;
+  const chColor = CHANNEL_COLORS[campaign.channel]?.text || '#6b7280';
+  const isDragging = dragId === campaign.id;
+
+  const onMouseEnter = () => {
+    setHov(true);
+    if(ref.current){ const r=ref.current.getBoundingClientRect(); setTipPos({top:r.bottom+6,left:r.left}); }
+  };
+  const onDragStart = (e) => {
+    setDragId(campaign.id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('campaignId', String(campaign.id));
+  };
+  const onDragEnd = () => setDragId(null);
+
+  return (
+    <>
+      <div
+        ref={ref}
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={()=>setHov(false)}
+        onClick={()=>!isDragging&&onClick&&onClick(campaign)}
+        className={isDragging ? 'card-dragging' : ''}
+        style={{
+          background: sc.bg, border:`1px solid ${sc.border}`, borderRadius:6,
+          padding: compact?'4px 6px':'5px 7px', marginBottom:3,
+          cursor:'grab', userSelect:'none', transition:'box-shadow 0.15s, transform 0.1s, opacity 0.15s',
+          overflow:'hidden', minWidth:0, maxWidth:'100%',
+          boxShadow: hov&&!isDragging ? '0 2px 8px rgba(0,0,0,0.10)' : 'none',
+          transform: hov&&!isDragging ? 'translateY(-1px)' : 'none',
+        }}
+      >
+        <div style={{display:'flex',alignItems:'center',gap:4,marginBottom:compact?0:2}}>
+          <ChannelIcon channel={campaign.channel} size={11} color={sc.text}/>
+          <span style={{fontSize:11,fontWeight:600,color:sc.text,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{campaign.name}</span>
+        </div>
+        {!compact && (
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginLeft:10}}>
+            <span style={{fontSize:10,color:'#9ca3af'}}>{campaign.time}</span>
+            <span style={{fontSize:9,fontWeight:700,color:badge.text,background:badge.bg,padding:'1px 5px',borderRadius:3,letterSpacing:'0.04em',textTransform:'uppercase'}}>
+              {(STATUSES[campaign.status]||'').slice(0,3)}
+            </span>
+          </div>
+        )}
+      </div>
+      {hov && !isDragging && (
+        <div style={{
+          position:'fixed',top:tipPos.top,left:Math.min(tipPos.left,window.innerWidth-220),
+          width:210,background:'white',border:'1px solid #e5e7eb',borderRadius:8,
+          padding:12,boxShadow:'0 8px 24px rgba(0,0,0,0.14)',zIndex:9000,pointerEvents:'none',
+        }}>
+          <div style={{fontWeight:600,fontSize:13,marginBottom:8,color:NAVY}}>{campaign.name}</div>
+          {[['Channel',CHANNELS[campaign.channel]],['Type',campaign.type],['Status',STATUSES[campaign.status]],['Segment',campaign.segment],campaign.time&&['Time',campaign.time]].filter(Boolean).map(([k,v])=>(
+            <div key={k} style={{display:'flex',gap:6,marginBottom:4}}>
+              <span style={{fontSize:11,color:'#9ca3af',width:56,flexShrink:0}}>{k}</span>
+              <span style={{fontSize:11,color:'#374151',fontWeight:500}}>{v}</span>
+            </div>
+          ))}
+          <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid #f3f4f6',fontSize:10,color:'#9ca3af',display:'flex',alignItems:'center',gap:4}}>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v4l2.5 2.5" stroke="#9ca3af" strokeWidth="1.3" strokeLinecap="round"/><circle cx="5" cy="5" r="4" stroke="#9ca3af" strokeWidth="1.1" fill="none"/></svg>
+            Drag to reschedule
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── Drop cell wrapper ────────────────────────────────────────
+const TODAY_REF = new Date(2025,0,1); // same "today" reference
+function isPast(date) {
+  if(!date) return false;
+  const t = new Date(date); t.setHours(0,0,0,0);
+  const r = new Date(TODAY_REF); r.setHours(0,0,0,0);
+  return t < r;
+}
+function DropCell({ date, children, onDrop, style, className, onMouseEnter, onMouseLeave }) {
+  const { dragId } = useContext(DragCtx);
+  const [over, setOver] = useState(false);
+  const past = date ? isPast(date) : false;
+  const onDragOver = (e) => {
+    if(!dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = past ? 'none' : 'move';
+    if(!past) setOver(true);
+  };
+  const onDragLeave = () => setOver(false);
+  const handleDrop = (e) => {
+    e.preventDefault(); setOver(false);
+    if(past) return;
+    const id = parseInt(e.dataTransfer.getData('campaignId'),10);
+    if(id && date) onDrop(id, date);
+  };
+  return (
+    <div
+      onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={handleDrop}
+      onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
+      className={`${className||''} ${over&&dragId&&!past?'drop-zone-active':''}`}
+      style={{
+        ...style,
+        ...(dragId && past ? { cursor:'not-allowed', opacity: 0.6 } : {}),
+      }}
+    >{children}</div>
+  );
+}
+
+// ── Shared campaign tooltip ───────────────────────────────────
+function CampaignTooltip({ campaign, tipPos }) {
+  return (
+    <div style={{
+      position:'fixed',top:tipPos.top,left:Math.min(tipPos.left,window.innerWidth-220),
+      width:210,background:'white',border:'1px solid #e5e7eb',borderRadius:8,
+      padding:12,boxShadow:'0 8px 24px rgba(0,0,0,0.14)',zIndex:9000,pointerEvents:'none',
+    }}>
+      <div style={{fontWeight:600,fontSize:13,marginBottom:8,color:NAVY}}>{campaign.name}</div>
+      {[['Channel',CHANNELS[campaign.channel]],['Type',campaign.type],['Status',STATUSES[campaign.status]],['Segment',campaign.segment],campaign.time&&['Time',campaign.time]].filter(Boolean).map(([k,v])=>(
+        <div key={k} style={{display:'flex',gap:6,marginBottom:4}}>
+          <span style={{fontSize:11,color:'#9ca3af',width:56,flexShrink:0}}>{k}</span>
+          <span style={{fontSize:11,color:'#374151',fontWeight:500}}>{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Span bar (week view — draggable + resizable) ────────────
+function SpanBar({ campaign, fullWidth, onCampaignClick, weekDays, numCols, onResize }) {
+  const { dragId, setDragId } = useContext(DragCtx);
+  const [hov, setHov] = useState(false);
+  const [tipPos, setTipPos] = useState({top:0,left:0});
+  const ref = useRef(null);
+  const resizingRef = useRef(false);
+  const cc = STATUS_CARD_COLORS[campaign.status] || STATUS_CARD_COLORS.draft;
+  const isDragging = dragId === campaign.id;
+  const onMouseEnter = () => {
+    if(resizingRef.current) return;
+    setHov(true);
+    if(ref.current){ const r=ref.current.getBoundingClientRect(); setTipPos({top:r.bottom+6,left:r.left}); }
+  };
+  const onDragStart = (e) => {
+    if(resizingRef.current){e.preventDefault();return;}
+    setDragId(campaign.id);
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('campaignId',String(campaign.id));
+  };
+  const onDragEnd = () => setDragId(null);
+  const startResize = (edge, e) => {
+    e.stopPropagation(); e.preventDefault();
+    resizingRef.current = true; setHov(false);
+    const wrapperEl = ref.current.parentElement;
+    const container = ref.current.closest('[data-span-container]');
+    if(!container||!weekDays||!numCols) return;
+    const cRect = container.getBoundingClientRect();
+    const colW = cRect.width / numCols;
+    const si = weekDays.findIndex(d=>sameDay(d,campaign.startDate));
+    const ei = weekDays.findIndex(d=>sameDay(d,campaign.endDate));
+    const origColStart = si===-1?0:si, origColEnd = ei===-1?numCols-1:ei;
+    let finalColStart=origColStart, finalColEnd=origColEnd;
+    document.body.style.cursor='col-resize'; document.body.style.userSelect='none';
+    const onMove=(ev)=>{
+      const col=Math.max(0,Math.min(numCols-1,Math.floor((ev.clientX-cRect.left)/colW)));
+      if(edge==='left'){finalColStart=Math.min(col,finalColEnd);}else{finalColEnd=Math.max(col,finalColStart);}
+      wrapperEl.style.left=`calc(${(finalColStart/numCols)*100}% + 3px)`;
+      wrapperEl.style.width=`calc(${((finalColEnd-finalColStart+1)/numCols)*100}% - 6px)`;
+    };
+    const onUp=()=>{
+      document.body.style.cursor=''; document.body.style.userSelect='';
+      window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp);
+      if(onResize){
+        const ns=edge==='left'?weekDays[finalColStart]:null;
+        const ne=edge==='right'?weekDays[finalColEnd]:null;
+        onResize(campaign.id,ns,ne);
+      }
+      setTimeout(()=>{resizingRef.current=false;},50);
+    };
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+  };
+  return (
+    <>
+      <div ref={ref} draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
+        onMouseEnter={onMouseEnter} onMouseLeave={()=>setHov(false)}
+        onClick={()=>!isDragging&&!resizingRef.current&&onCampaignClick&&onCampaignClick(campaign)}
+        className={isDragging?'card-dragging':''}
+        style={{
+          position:'absolute',left:0,top:0,width:'100%',height:22,
+          background:hov&&!isDragging?cc.border:cc.bg,
+          borderTop:`1.5px solid ${cc.border}`, borderBottom:`1.5px solid ${cc.border}`,
+          borderLeft:`4px solid ${cc.border}`, borderRight:`4px solid ${cc.border}`,
+          borderRadius:4, display:'flex',alignItems:'center',gap:5,padding:'0 10px',
+          cursor:'grab',transition:'background 0.15s',overflow:'hidden',zIndex:10,userSelect:'none',
+        }}>
+        <ChannelIcon channel={campaign.channel} size={11} color={cc.text}/>
+        <span style={{fontSize:11,fontWeight:600,color:cc.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{campaign.name}</span>
+        <div onMouseDown={e=>startResize('left',e)} style={{position:'absolute',left:0,top:0,bottom:0,width:8,cursor:'col-resize',zIndex:20}}/>
+        <div onMouseDown={e=>startResize('right',e)} style={{position:'absolute',right:0,top:0,bottom:0,width:8,cursor:'col-resize',zIndex:20}}/>
+      </div>
+      {hov&&!isDragging&&<CampaignTooltip campaign={campaign} tipPos={tipPos}/>}
+    </>
+  );
+}
+
+// ── Filter pill ──────────────────────────────────────────────
+function FilterPill({ label, value, options, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(()=>{ const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);}; document.addEventListener('mousedown',h); return()=>document.removeEventListener('mousedown',h); },[]);
+  return (
+    <div ref={ref} style={{position:'relative',display:'inline-block'}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{display:'flex',alignItems:'center',gap:5,padding:'5px 10px',background:'white',border:`1px solid ${open?INDIGO:'#e5e7eb'}`,borderRadius:6,fontSize:12,fontWeight:500,color:'#374151',cursor:'pointer'}}>
+        <span style={{color:'#6b7280'}}>{label} :</span>
+        <span style={{color:NAVY}}>{value}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{transform:open?'rotate(180deg)':'none',transition:'transform 0.15s'}}><path d="M2 4l4 4 4-4" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round"/></svg>
+      </button>
+      {open && (
+        <div style={{position:'absolute',top:'calc(100% + 4px)',left:0,minWidth:130,background:'white',border:'1px solid #e5e7eb',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,0.1)',zIndex:500,overflow:'hidden'}}>
+          {options.map(o=>(
+            <div key={o} onClick={()=>{onChange(o);setOpen(false);}}
+              style={{padding:'8px 12px',fontSize:12,cursor:'pointer',background:value===o?INDIGO_LIGHT:'white',color:value===o?INDIGO:'#374151',fontWeight:value===o?600:400}}
+              onMouseEnter={e=>{if(value!==o)e.currentTarget.style.background='#f9fafb';}}
+              onMouseLeave={e=>{if(value!==o)e.currentTarget.style.background='white';}}
+            >{o}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Create campaign modal ─────────────────────────────────────
+function CreateCampaignModal({ defaultDate, onClose, onCreate }) {
+  const [name, setName] = useState('');
+  const [channel, setChannel] = useState('');
+  const [startDate, setStartDate] = useState(defaultDate ? fmtDate(defaultDate) : '');
+  const [sendTime, setSendTime] = useState('0:00');
+  const [sto, setSto] = useState(false);
+  const [channelOpen, setChannelOpen] = useState(false);
+  const channelRef = useRef(null);
+  useEffect(()=>{ const h=(e)=>{if(channelRef.current&&!channelRef.current.contains(e.target))setChannelOpen(false);}; document.addEventListener('mousedown',h); return()=>document.removeEventListener('mousedown',h); },[]);
+  const handleConfirm = () => {
+    if(!name.trim()) return;
+    onCreate({ name:name.trim(), channel:channel||'email', startDate, sendTime, sto });
+    onClose();
+  };
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'white',borderRadius:12,width:480,boxShadow:'0 24px 64px rgba(0,0,0,0.18)',overflow:'hidden'}}>
+        <div style={{padding:'20px 24px 16px',borderBottom:'1px solid #f0f0f4'}}>
+          <h2 style={{fontSize:17,fontWeight:700,color:NAVY,margin:0}}>Create campaign</h2>
+        </div>
+        <div style={{padding:'20px 24px 24px',display:'flex',flexDirection:'column',gap:18}}>
+          {/* Campaign name */}
+          <div>
+            <label style={{display:'block',fontSize:13,fontWeight:600,color:NAVY,marginBottom:6}}>Campaign name</label>
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="Enter..." style={{width:'100%',padding:'9px 12px',border:'1px solid #e5e7eb',borderRadius:8,fontSize:13,color:NAVY,outline:'none',fontFamily:'Inter,sans-serif'}} onFocus={e=>e.target.style.borderColor=INDIGO} onBlur={e=>e.target.style.borderColor='#e5e7eb'}/>
+          </div>
+          {/* Channel */}
+          <div ref={channelRef} style={{position:'relative'}}>
+            <label style={{display:'block',fontSize:13,fontWeight:600,color:NAVY,marginBottom:6}}>Channel</label>
+            <div onClick={()=>setChannelOpen(o=>!o)} style={{width:'100%',padding:'9px 12px',border:`1px solid ${channelOpen?INDIGO:'#e5e7eb'}`,borderRadius:8,fontSize:13,color:channel?NAVY:'#9ca3af',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',background:'white'}}>
+              <span>{channel?CHANNELS[channel]:'Select channel'}</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{transform:channelOpen?'rotate(180deg)':'none',transition:'transform 0.15s'}}><path d="M2 4l4 4 4-4" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </div>
+            {channelOpen && (
+              <div style={{position:'absolute',top:'100%',left:0,right:0,marginTop:4,background:'white',border:'1px solid #e5e7eb',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,0.1)',zIndex:10,overflow:'hidden'}}>
+                {Object.entries(CHANNELS).map(([k,v])=>(
+                  <div key={k} onClick={()=>{setChannel(k);setChannelOpen(false);}} style={{padding:'9px 12px',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:8,background:channel===k?INDIGO_LIGHT:'white',color:channel===k?INDIGO:'#374151',fontWeight:channel===k?600:400}}
+                    onMouseEnter={e=>{if(channel!==k)e.currentTarget.style.background='#f9fafb';}}
+                    onMouseLeave={e=>{if(channel!==k)e.currentTarget.style.background='white';}}>
+                    <ChannelIcon channel={k} size={13} color={channel===k?INDIGO:'#6b7280'}/>{v}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Start date + Send time */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:600,color:NAVY,marginBottom:6}}>Start date</label>
+              <div style={{position:'relative'}}>
+                <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e5e7eb',borderRadius:8,fontSize:13,color:NAVY,outline:'none',fontFamily:'Inter,sans-serif'}} onFocus={e=>e.target.style.borderColor=INDIGO} onBlur={e=>e.target.style.borderColor='#e5e7eb'}/>
+              </div>
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:13,fontWeight:600,color:NAVY,marginBottom:6}}>Send time</label>
+              <input type="time" value={sendTime} onChange={e=>setSendTime(e.target.value)} style={{width:'100%',padding:'9px 12px',border:'1px solid #e5e7eb',borderRadius:8,fontSize:13,color:NAVY,outline:'none',fontFamily:'Inter,sans-serif'}} onFocus={e=>e.target.style.borderColor=INDIGO} onBlur={e=>e.target.style.borderColor='#e5e7eb'}/>
+            </div>
+          </div>
+          {/* STO checkbox */}
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,color:NAVY}}>
+            <div onClick={()=>setSto(s=>!s)} style={{width:18,height:18,borderRadius:4,border:`1.5px solid ${sto?INDIGO:'#d1d5db'}`,background:sto?INDIGO:'white',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',cursor:'pointer',flexShrink:0}}>
+              {sto && <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2.5 5.5l2 2 4-4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+            </div>
+            Enable send time optimization
+          </label>
+        </div>
+        {/* Footer */}
+        <div style={{padding:'14px 24px',borderTop:'1px solid #f0f0f4',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <a href="#" style={{fontSize:13,color:INDIGO,fontWeight:500,textDecoration:'none',display:'flex',alignItems:'center',gap:4}} onMouseEnter={e=>e.currentTarget.style.textDecoration='underline'} onMouseLeave={e=>e.currentTarget.style.textDecoration='none'}>
+            Open in editor
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M3 1h7v7M10 1L4 7" stroke={INDIGO} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </a>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={onClose} style={{padding:'8px 20px',background:'white',color:'#374151',border:'1px solid #e5e7eb',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.borderColor='#d1d5db'} onMouseLeave={e=>e.currentTarget.style.borderColor='#e5e7eb'}>Cancel</button>
+            <button onClick={handleConfirm} style={{padding:'8px 20px',background:name.trim()?INDIGO:INDIGO_MID,color:'white',border:'none',borderRadius:8,fontSize:13,fontWeight:600,cursor:name.trim()?'pointer':'not-allowed',opacity:name.trim()?1:0.7,transition:'all 0.15s'}}>Confirm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Campaign modal ───────────────────────────────────────────
+function CampaignModal({ campaign, onClose }) {
+  if(!campaign) return null;
+  const sc = STATUS_CARD_COLORS[campaign.status] || STATUS_CARD_COLORS.draft;
+  const badge = STATUS_BADGE[campaign.status] || STATUS_BADGE.draft;
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.35)',zIndex:10000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'white',borderRadius:12,width:420,padding:28,boxShadow:'0 24px 64px rgba(0,0,0,0.18)'}}>
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:20}}>
+          <div>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <div style={{background:sc.bg,borderRadius:6,padding:6,border:`1px solid ${sc.border}`}}><ChannelIcon channel={campaign.channel} size={16} color={sc.text}/></div>
+              <h2 style={{fontSize:17,fontWeight:700,color:NAVY}}>{campaign.name}</h2>
+            </div>
+            <span style={{fontSize:11,fontWeight:600,background:badge.bg,color:badge.text,padding:'3px 8px',borderRadius:20,display:'inline-flex',alignItems:'center',gap:4}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:sc.dot}}/>
+              {STATUSES[campaign.status]}
+            </span>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:20,lineHeight:1}}>×</button>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          {[['Channel',CHANNELS[campaign.channel]],['Type',campaign.type],['Segment',campaign.segment],['Time',campaign.time||'—'],
+            ['Start',campaign.startDate?campaign.startDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'],
+            ['End',campaign.endDate?campaign.endDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—']
+          ].map(([k,v])=>(
+            <div key={k} style={{background:'#f9fafb',borderRadius:8,padding:'10px 12px'}}>
+              <div style={{fontSize:10,fontWeight:600,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>{k}</div>
+              <div style={{fontSize:13,fontWeight:600,color:NAVY}}>{v}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:8,marginTop:20}}>
+          <button style={{flex:1,padding:'9px 0',background:INDIGO,color:'white',border:'none',borderRadius:7,fontSize:13,fontWeight:600,cursor:'pointer'}}>Edit Campaign</button>
+          <button onClick={onClose} style={{flex:1,padding:'9px 0',background:'white',color:'#374151',border:'1px solid #e5e7eb',borderRadius:7,fontSize:13,fontWeight:600,cursor:'pointer'}}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Unscheduled panel ────────────────────────────────────────
+function UnscheduledPanel({ campaigns, onClose }) {
+  const { setDragId } = useContext(DragCtx);
+  const onDragStart = (e, c) => {
+    setDragId(c.id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('campaignId', String(c.id));
+  };
+
+  const unschedulable = campaigns.filter(c => c.status === 'inactive' || c.status === 'stopped');
+  const schedulable = campaigns.filter(c => c.status !== 'inactive' && c.status !== 'stopped');
+
+  const renderCard = (c) => (
+    <div key={c.id} draggable onDragStart={e=>onDragStart(e,c)} onDragEnd={()=>setDragId(null)}
+      style={{padding:'10px 12px',borderRadius:8,cursor:'grab',marginBottom:6,background:'white',border:'1px solid #e5e7eb',transition:'background 0.1s,box-shadow 0.15s'}}
+      onMouseEnter={e=>{e.currentTarget.style.background=INDIGO_LIGHT;e.currentTarget.style.boxShadow='0 2px 8px rgba(79,70,229,0.1)';e.currentTarget.style.borderColor=INDIGO_MID;}}
+      onMouseLeave={e=>{e.currentTarget.style.background='white';e.currentTarget.style.boxShadow='none';e.currentTarget.style.borderColor='#e5e7eb';}}
+    >
+      <div style={{display:'flex',alignItems:'center',gap:8}}>
+        <div style={{width:28,height:28,borderRadius:6,background:INDIGO_LIGHT,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+          <ChannelIcon channel={c.channel} size={13} color={INDIGO}/>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:600,color:NAVY,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</div>
+          <div style={{fontSize:11,color:'#9ca3af',marginTop:1}}>{c.type}</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{width:280,background:'#f9fafb',borderLeft:'1px solid #e5e7eb',display:'flex',flexDirection:'column',flexShrink:0,height:'100%'}}>
+      <div style={{padding:'16px 16px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid #f0f0f4',background:'white'}}>
+        <span style={{fontSize:14,fontWeight:700,color:NAVY}}>Unscheduled campaigns ({campaigns.length})</span>
+        <button onClick={onClose} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:18,lineHeight:1,padding:4}}>×</button>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'12px 12px 16px'}}>
+        {schedulable.length > 0 && (
+          <>
+            <div style={{fontSize:11,fontWeight:600,color:'#6b7280',marginBottom:6,textTransform:'uppercase',letterSpacing:'0.06em'}}>Unscheduled campaigns</div>
+            <div style={{fontSize:11,color:'#9ca3af',marginBottom:10,display:'flex',alignItems:'center',gap:4}}>
+              Drag and drop each campaign onto the calendar to set a start date.
+            </div>
+            {schedulable.map(renderCard)}
+          </>
+        )}
+        {unschedulable.length > 0 && (
+          <>
+            <div style={{fontSize:11,fontWeight:600,color:'#6b7280',marginTop:schedulable.length?16:0,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.06em'}}>Unable to schedule</div>
+            {unschedulable.map(c => (
+              <div key={c.id} style={{padding:'10px 12px',borderRadius:8,marginBottom:6,background:'white',border:'1px solid #e5e7eb',opacity:0.7}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{width:28,height:28,borderRadius:6,background:'#f3f4f6',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <ChannelIcon channel={c.channel} size={13} color='#9ca3af'/>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:600,color:NAVY,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.name}</div>
+                    <div style={{fontSize:11,color:'#9ca3af',marginTop:1}}>{c.type}</div>
+                  </div>
+                  <span style={{fontSize:9,fontWeight:600,color:'#f97316',background:'#fff7ed',padding:'2px 6px',borderRadius:3,flexShrink:0}}>Inactive</span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Toast ────────────────────────────────────────────────────
+function Toast({ msg, onDone }) {
+  const [leaving, setLeaving] = useState(false);
+  useEffect(()=>{
+    const t1 = setTimeout(()=>setLeaving(true), 2400);
+    const t2 = setTimeout(()=>onDone(), 2700);
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
+  return (
+    <div className={`toast${leaving?' out':''}`} style={{
+      position:'fixed',bottom:28,left:'50%',transform:'translateX(-50%)',
+      background:NAVY,color:'white',borderRadius:9,padding:'10px 18px',
+      fontSize:13,fontWeight:500,zIndex:20000,display:'flex',alignItems:'center',gap:8,
+      boxShadow:'0 8px 24px rgba(0,0,0,0.2)',whiteSpace:'nowrap',
+    }}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" fill="#10b981"/><path d="M4.5 8l2.5 2.5 4-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      {msg}
+    </div>
+  );
+}
+
+// ── Month cell ───────────────────────────────────────────────
+function MonthCell({ date, campaigns, isCurrentMonth, isToday, onCampaignClick, onDrop }) {
+  const [showAll, setShowAll] = useState(false);
+  const MAX = 3;
+  const visible = campaigns.slice(0, MAX);
+  const overflow = campaigns.length - MAX;
+  return (
+    <DropCell date={date} onDrop={onDrop} style={{
+      minHeight:110,padding:'6px 6px 4px',overflow:'hidden',minWidth:0,
+      background:isToday?'#fafafe':'white',
+      border:'1px solid #f0f0f4',
+      borderTop:isToday?`2px solid ${INDIGO}`:'1px solid #f0f0f4',
+    }}>
+      <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:24,height:24,borderRadius:'50%',marginBottom:4,background:isToday?INDIGO:'transparent',color:isToday?'white':isCurrentMonth?NAVY:'#d1d5db',fontSize:12,fontWeight:isToday?700:500}}>{date.getDate()}</div>
+      {(showAll?campaigns:visible).map(c=><CampaignCard key={c.id} campaign={c} compact onClick={onCampaignClick}/>)}
+      {overflow>0&&!showAll&&<button onClick={()=>setShowAll(true)} style={{fontSize:11,color:INDIGO,fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:'2px 0'}}>+{overflow} more</button>}
+      {showAll&&campaigns.length>0&&<button onClick={()=>setShowAll(false)} style={{fontSize:11,color:'#9ca3af',fontWeight:500,background:'none',border:'none',cursor:'pointer',padding:'2px 0'}}>show less</button>}
+    </DropCell>
+  );
+}
+
+// ── Week day cell (expandable, like MonthCell) ───────────────
+function WeekDayCell({ day, campaigns, index, total, isToday, density, onCampaignClick, onDrop, onCreateClick }) {
+  const [showAll, setShowAll] = useState(false);
+  const [hov, setHov] = useState(false);
+  const MAX = density ? 4 : 3;
+  const visible = showAll ? campaigns : campaigns.slice(0, MAX);
+  const overflow = campaigns.length - MAX;
+  return (
+    <DropCell date={day} onDrop={onDrop} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{
+      minHeight: density ? 140 : 180,
+      padding: density ? '6px 5px' : '8px 7px',
+      overflow: 'hidden', minWidth: 0, position:'relative',
+      borderRight: index < total - 1 ? '1px solid #eaeaed' : 'none',
+      borderBottom: '1px solid #eaeaed',
+      background: isToday ? 'rgba(79,70,229,0.02)' : 'white',
+    }}>
+      {hov && <button onClick={(e)=>{e.stopPropagation();onCreateClick&&onCreateClick(day);}} style={{position:'absolute',bottom:6,right:6,padding:'3px 10px',borderRadius:6,border:'1px solid #d1d5db',background:'white',color:'#6b7280',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:4,zIndex:4,boxShadow:'0 1px 3px rgba(0,0,0,0.08)',whiteSpace:'nowrap'}} onMouseEnter={e=>{e.currentTarget.style.background=INDIGO;e.currentTarget.style.color='white';e.currentTarget.style.borderColor=INDIGO;}} onMouseLeave={e=>{e.currentTarget.style.background='white';e.currentTarget.style.color='#6b7280';e.currentTarget.style.borderColor='#d1d5db';}}>+ Create campaign</button>}
+      {visible.map(c => <CampaignCard key={c.id} campaign={c} compact={density} onClick={onCampaignClick}/>)}
+      {overflow > 0 && !showAll && (
+        <button onClick={() => setShowAll(true)}
+          style={{fontSize:11,color:INDIGO,fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:'3px 0',width:'100%',textAlign:'center',borderRadius:5}}
+          onMouseEnter={e=>e.currentTarget.style.background=INDIGO_LIGHT}
+          onMouseLeave={e=>e.currentTarget.style.background='none'}>
+          +{overflow} more
+        </button>
+      )}
+      {showAll && campaigns.length > MAX && (
+        <button onClick={() => setShowAll(false)}
+          style={{fontSize:11,color:'#9ca3af',fontWeight:500,background:'none',border:'none',cursor:'pointer',padding:'3px 0',width:'100%',textAlign:'center',borderRadius:5}}
+          onMouseEnter={e=>e.currentTarget.style.background='#f9fafb'}
+          onMouseLeave={e=>e.currentTarget.style.background='none'}>
+          show less
+        </button>
+      )}
+    </DropCell>
+  );
+}
+
+// ── Week View ────────────────────────────────────────────────
+function WeekView({ weekDays, filtered, today, onCampaignClick, density, onDrop, onResize, onCreateClick }) {
+  const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const N = weekDays.length;
+
+  // Split: multi-day spans vs single-day items
+  const isMultiDay = (c) => fmtDate(c.startDate) !== fmtDate(c.endDate);
+
+  const visibleSpans = filtered.filter(c => isMultiDay(c)).filter(c => {
+    const last = weekDays[N-1];
+    return c.startDate <= last && c.endDate >= weekDays[0];
+  }).map(c => {
+    const si = weekDays.findIndex(d => sameDay(d, c.startDate));
+    const ei = weekDays.findIndex(d => sameDay(d, c.endDate));
+    const colStart = si === -1 ? 0 : si;
+    const colEnd   = ei === -1 ? N-1 : ei;
+    return { campaign:c, colStart, colEnd, colSpan: colEnd-colStart+1 };
+  });
+
+  // Greedy row packing — no two spans in same row overlap
+  const rows = [];
+  visibleSpans.forEach(s => {
+    let placed = false;
+    for(const row of rows) {
+      const overlaps = row.some(r => r.colEnd >= s.colStart && r.colStart <= s.colEnd);
+      if(!overlaps) { row.push(s); placed = true; break; }
+    }
+    if(!placed) rows.push([s]);
+  });
+
+  const ROW_H = 28; // px per span row
+  const spanSectionH = rows.length > 0 ? rows.length * ROW_H + 8 : 0;
+
+  // Single-day campaigns per day cell
+  const getSingleDay = (day) => filtered.filter(c => !isMultiDay(c) && fmtDate(c.startDate) === fmtDate(day));
+
+  return (
+    <div style={{minWidth:700,paddingBottom:24}}>
+      {/* Header */}
+      <div style={{display:'grid',gridTemplateColumns:`repeat(${N},1fr)`,background:'white',borderBottom:'2px solid #f0f0f4',position:'sticky',top:0,zIndex:50}}>
+        {weekDays.map((day,i)=>{
+          const isToday=sameDay(day,today);
+          return (
+            <div key={i} style={{padding:'10px 12px',borderRight:i<N-1?'1px solid #f0f0f4':'none'}}>
+              <div style={{fontSize:11,fontWeight:600,color:'#9ca3af',letterSpacing:'0.08em',marginBottom:4}}>{DAYS[day.getDay()]}</div>
+              <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:'50%',background:isToday?INDIGO:'transparent',color:isToday?'white':NAVY,fontSize:14,fontWeight:isToday?700:600}}>{day.getDate()}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Span bars section — multi-day campaigns */}
+      {rows.length > 0 && (
+        <div data-span-container style={{position:'relative',background:'white',borderBottom:'1px solid #f0f0f4',height:spanSectionH,overflow:'hidden'}}>
+          {/* Column grid lines */}
+          <div style={{position:'absolute',inset:0,display:'grid',gridTemplateColumns:`repeat(${N},1fr)`,pointerEvents:'none'}}>
+            {weekDays.map((_,i)=><div key={i} style={{borderRight:i<N-1?'1px solid #f0f0f4':'none'}}/>)}
+          </div>
+          {/* Bars per row */}
+          {rows.map((row,ri)=>
+            row.map(({campaign,colStart,colSpan},si)=>(
+              <div key={`${ri}-${si}`} style={{
+                position:'absolute',
+                left:`calc(${(colStart/N)*100}% + 3px)`,
+                width:`calc(${(colSpan/N)*100}% - 6px)`,
+                top: ri * ROW_H + 4,
+                height:22,
+              }}>
+                <SpanBar campaign={campaign} fullWidth onCampaignClick={onCampaignClick} weekDays={weekDays} numCols={N} onResize={onResize}/>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Day cells — single-day campaigns only */}
+      <div style={{display:'grid',gridTemplateColumns:`repeat(${N},1fr)`}}>
+        {weekDays.map((day,i)=>(
+          <WeekDayCell key={i} day={day} campaigns={getSingleDay(day)} index={i} total={N}
+            isToday={sameDay(day,today)} density={density} onCampaignClick={onCampaignClick} onDrop={onDrop} onCreateClick={onCreateClick}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Month span bar segment (draggable + resizable) ──────────
+function MonthSpanBar({ campaign, isStart, isEnd, onCampaignClick, week, onResize }) {
+  const { dragId, setDragId } = useContext(DragCtx);
+  const [hov, setHov] = useState(false);
+  const [tipPos, setTipPos] = useState({top:0,left:0});
+  const ref = useRef(null);
+  const resizingRef = useRef(false);
+  const cc = STATUS_CARD_COLORS[campaign.status] || STATUS_CARD_COLORS.draft;
+  const isDragging = dragId === campaign.id;
+  const onMouseEnter = () => {
+    if(resizingRef.current) return;
+    setHov(true);
+    if(ref.current){ const r=ref.current.getBoundingClientRect(); setTipPos({top:r.bottom+6,left:r.left}); }
+  };
+  const onDragStart = (e) => {
+    if(resizingRef.current){e.preventDefault();return;}
+    setDragId(campaign.id);
+    e.dataTransfer.effectAllowed='move';
+    e.dataTransfer.setData('campaignId',String(campaign.id));
+  };
+  const onDragEnd = () => setDragId(null);
+  const startResize = (edge, e) => {
+    e.stopPropagation(); e.preventDefault();
+    resizingRef.current = true; setHov(false);
+    const posWrapper = ref.current.parentElement.parentElement;
+    const container = ref.current.closest('[data-span-container]');
+    if(!container||!week) return;
+    const cRect = container.getBoundingClientRect();
+    const colW = cRect.width / 7;
+    const si = week.findIndex(d=>sameDay(d,campaign.startDate));
+    const ei = week.findIndex(d=>sameDay(d,campaign.endDate));
+    const origColStart = si===-1?0:si, origColEnd = ei===-1?6:ei;
+    let finalColStart=origColStart, finalColEnd=origColEnd;
+    document.body.style.cursor='col-resize'; document.body.style.userSelect='none';
+    const onMove=(ev)=>{
+      const col=Math.max(0,Math.min(6,Math.floor((ev.clientX-cRect.left)/colW)));
+      if(edge==='left'){finalColStart=Math.min(col,finalColEnd);}else{finalColEnd=Math.max(col,finalColStart);}
+      posWrapper.style.left=`${(finalColStart/7)*100}%`;
+      posWrapper.style.width=`${((finalColEnd-finalColStart+1)/7)*100}%`;
+    };
+    const onUp=()=>{
+      document.body.style.cursor=''; document.body.style.userSelect='';
+      window.removeEventListener('mousemove',onMove); window.removeEventListener('mouseup',onUp);
+      if(onResize){
+        const ns=edge==='left'?week[finalColStart]:null;
+        const ne=edge==='right'?week[finalColEnd]:null;
+        onResize(campaign.id,ns,ne);
+      }
+      setTimeout(()=>{resizingRef.current=false;},50);
+    };
+    window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+  };
+  return (
+    <>
+    <div ref={ref} draggable onDragStart={onDragStart} onDragEnd={onDragEnd}
+      onClick={()=>!isDragging&&!resizingRef.current&&onCampaignClick&&onCampaignClick(campaign)}
+      onMouseEnter={onMouseEnter} onMouseLeave={()=>setHov(false)}
+      className={isDragging?'card-dragging':''}
+      style={{
+        position:'absolute', top:0, bottom:0,
+        left: isStart ? 3 : 0, right: isEnd ? 3 : 0,
+        background: hov&&!isDragging ? cc.border : cc.bg,
+        borderTop:`1.5px solid ${cc.border}`,
+        borderBottom:`1.5px solid ${cc.border}`,
+        borderLeft: isStart ? `4px solid ${cc.border}` : 'none',
+        borderRight: isEnd ? `4px solid ${cc.border}` : 'none',
+        borderTopLeftRadius: isStart ? 4 : 0,
+        borderBottomLeftRadius: isStart ? 4 : 0,
+        borderTopRightRadius: isEnd ? 4 : 0,
+        borderBottomRightRadius: isEnd ? 4 : 0,
+        display:'flex', alignItems:'center', gap:4, padding:'0 8px',
+        cursor:'grab', overflow:'hidden', transition:'background 0.15s',
+        userSelect:'none',
+      }}>
+      {isStart && (
+        <>
+          <ChannelIcon channel={campaign.channel} size={10} color={cc.text}/>
+          <span style={{fontSize:11,fontWeight:600,color:cc.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{campaign.name}</span>
+        </>
+      )}
+      {isStart && <div onMouseDown={e=>startResize('left',e)} style={{position:'absolute',left:0,top:0,bottom:0,width:8,cursor:'col-resize',zIndex:20}}/>}
+      {isEnd && <div onMouseDown={e=>startResize('right',e)} style={{position:'absolute',right:0,top:0,bottom:0,width:8,cursor:'col-resize',zIndex:20}}/>}
+    </div>
+    {hov&&!isDragging&&<CampaignTooltip campaign={campaign} tipPos={tipPos}/>}
+    </>
+  );
+}
+
+
+
+// ── Month day cell (unified — single-day items only) ─────────
+function MonthDayCell({ date, singleDay, isCurrentMonth, isToday, spanH, onCampaignClick, onDrop, isLast, onCreateClick }) {
+  const [showAll, setShowAll] = useState(false);
+  const [hov, setHov] = useState(false);
+  const MAX_SINGLE = 3;
+  const visible = showAll ? singleDay : singleDay.slice(0, MAX_SINGLE);
+  const overflow = singleDay.length - MAX_SINGLE;
+  return (
+    <DropCell date={date} onDrop={onDrop} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{
+      minHeight:110, overflow:'hidden', minWidth:0, position:'relative',
+      borderRight: isLast ? 'none' : '1px solid #f0f0f4',
+      borderBottom:'1px solid #f0f0f4',
+      borderTop: isToday ? `2px solid ${INDIGO}` : '1px solid #f0f0f4',
+      background: isToday ? 'rgba(79,70,229,0.018)' : 'white',
+    }}>
+      {hov && <button onClick={(e)=>{e.stopPropagation();onCreateClick&&onCreateClick(date);}} style={{position:'absolute',top:5,right:5,width:22,height:22,borderRadius:5,border:'1px solid #d1d5db',background:'white',color:'#6b7280',fontSize:16,lineHeight:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:4,boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}} onMouseEnter={e=>{e.currentTarget.style.background=INDIGO;e.currentTarget.style.color='white';e.currentTarget.style.borderColor=INDIGO;}} onMouseLeave={e=>{e.currentTarget.style.background='white';e.currentTarget.style.color='#6b7280';e.currentTarget.style.borderColor='#d1d5db';}}>+</button>}
+      <div style={{padding:'5px 6px 2px',position:'relative',zIndex:2,pointerEvents:'none'}}>
+        <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:22,height:22,borderRadius:'50%',background:isToday?INDIGO:'transparent',color:isToday?'white':isCurrentMonth?NAVY:'#d1d5db',fontSize:12,fontWeight:isToday?700:500}}>
+          {date.getDate()}
+        </div>
+      </div>
+      {spanH > 0 && <div style={{height:spanH}}/>}
+      <div style={{padding:'2px 4px 4px',overflow:'hidden',minWidth:0,position:'relative',zIndex:2}}>
+        {visible.map(c=><CampaignCard key={c.id} campaign={c} compact onClick={onCampaignClick}/>)}
+        {overflow>0&&!showAll&&<button onClick={()=>setShowAll(true)} style={{fontSize:11,color:INDIGO,fontWeight:600,background:'none',border:'none',cursor:'pointer',padding:'2px 0'}}>+{overflow} more</button>}
+        {showAll&&singleDay.length>MAX_SINGLE&&<button onClick={()=>setShowAll(false)} style={{fontSize:11,color:'#9ca3af',fontWeight:500,background:'none',border:'none',cursor:'pointer',padding:'2px 0'}}>show less</button>}
+      </div>
+    </DropCell>
+  );
+}
+
+// ── Month week row — unified cells ───────────────────────────
+function MonthWeekRow({ week, allMultiDay, getSingleDay, monthStart, monthEnd, today, onCampaignClick, onDrop, onResize, onCreateClick }) {
+  const weekEnd = week[6];
+
+  const spans = allMultiDay
+    .filter(c => c.startDate <= weekEnd && c.endDate >= week[0])
+    .map(c => {
+      const si = week.findIndex(d => sameDay(d, c.startDate));
+      const ei = week.findIndex(d => sameDay(d, c.endDate));
+      const colStart = si === -1 ? 0 : si;
+      const colEnd   = ei === -1 ? 6 : ei;
+      return { campaign:c, colStart, colEnd, colSpan:colEnd-colStart+1, isStart:si!==-1, isEnd:ei!==-1 };
+    });
+
+  const MAX_SPAN_ROWS = 3;
+  const spanRows = [];
+  spans.forEach(s => {
+    let placed = false;
+    for(const row of spanRows) {
+      const overlaps = row.some(r => r.colEnd >= s.colStart && r.colStart <= s.colEnd);
+      if(!overlaps) { row.push(s); placed = true; break; }
+    }
+    if(!placed && spanRows.length < MAX_SPAN_ROWS) spanRows.push([s]);
+  });
+
+  const DATE_H = 30;
+  const ROW_H  = 24;
+  const spanH  = spanRows.length * ROW_H + (spanRows.length > 0 ? 4 : 0);
+
+  return (
+    <div data-span-container style={{position:'relative', display:'grid', gridTemplateColumns:'repeat(7,1fr)'}}>
+      {week.map((day, i) => (
+        <MonthDayCell key={i} date={day}
+          singleDay={getSingleDay(day)}
+          isCurrentMonth={day>=monthStart&&day<=monthEnd}
+          isToday={sameDay(day,today)}
+          spanH={spanH}
+          onCampaignClick={onCampaignClick}
+          onDrop={onDrop}
+          isLast={i===6}
+          onCreateClick={onCreateClick}/>
+      ))}
+      {spanRows.map((row,ri)=>row.map((s,si)=>(
+        <div key={`${ri}-${si}`} style={{
+          position:'absolute',
+          left:`${(s.colStart/7)*100}%`,
+          width:`${(s.colSpan/7)*100}%`,
+          top: DATE_H + ri*ROW_H + 2,
+          height: ROW_H - 4,
+          zIndex:5, pointerEvents:'none',
+        }}>
+          <div style={{pointerEvents:'auto',position:'relative',height:'100%'}}>
+            <MonthSpanBar campaign={s.campaign} isStart={s.isStart} isEnd={s.isEnd} onCampaignClick={onCampaignClick} week={week} onResize={onResize}/>
+          </div>
+        </div>
+      )))}
+    </div>
+  );
+}
+
+// ── Month View ───────────────────────────────────────────────
+function MonthView({ currentDate, calCells, monthStart, monthEnd, filtered, today, onCampaignClick, onDrop, onResize, onCreateClick }) {
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const isMultiDay = (c) => fmtDate(c.startDate) !== fmtDate(c.endDate);
+  const allMultiDay = filtered.filter(isMultiDay);
+  const getSingleDay = (day) => filtered.filter(c => !isMultiDay(c) && fmtDate(c.startDate)===fmtDate(day));
+  const weeks = Array.from({length:6},(_,i)=>calCells.slice(i*7,i*7+7));
+  return (
+    <div style={{minWidth:700,paddingBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'white',borderBottom:'1px solid #f0f0f4',position:'sticky',top:0,zIndex:50}}>
+        {DAYS.map(d=><div key={d} style={{padding:'10px 12px',fontSize:11,fontWeight:600,color:'#9ca3af',letterSpacing:'0.08em',textTransform:'uppercase',borderRight:'1px solid #f0f0f4'}}>{d}</div>)}
+      </div>
+      {weeks.map((week,wi)=>(
+        <MonthWeekRow key={wi} week={week} allMultiDay={allMultiDay} getSingleDay={getSingleDay}
+          monthStart={monthStart} monthEnd={monthEnd} today={today}
+          onCampaignClick={onCampaignClick} onDrop={onDrop} onResize={onResize} onCreateClick={onCreateClick}/>
+      ))}
+    </div>
+  );
+}
+
+// ── App ──────────────────────────────────────────────────────
+function App() {
+  const [campaigns, setCampaigns] = useState(INIT_CAMPAIGNS);
+  const [viewMode, setViewMode] = useState('week');
+  const [currentDate, setCurrentDate] = useState(new Date(2025,0,29));
+  const [filters, setFilters] = useState({status:'All',channel:'All',type:'All',tag:'All',segment:'All'});
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [showUnscheduled, setShowUnscheduled] = useState(false);
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+  const [tweaks, setTweaks] = useState(/*EDITMODE-BEGIN*/{
+    "density": "Comfortable",
+    "showWeekends": true,
+    "colorBy": "Status"
+  }/*EDITMODE-END*/);
+  const [dragId, setDragId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [createForDate, setCreateForDate] = useState(null);
+  const unschedRef = useRef(null);
+
+  const weekStart = (() => { const d=new Date(currentDate); d.setDate(d.getDate()-d.getDay()); return d; })();
+  const weekDays = Array.from({length:tweaks.showWeekends?7:5},(_,i)=>addDays(weekStart,i));
+  const monthStart = new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  const monthEnd   = new Date(currentDate.getFullYear(),currentDate.getMonth()+1,0);
+  const calStart   = addDays(monthStart,-monthStart.getDay());
+  const calCells   = Array.from({length:42},(_,i)=>addDays(calStart,i));
+  const today      = new Date(2025,0,1);
+
+  const filtered = campaigns.filter(c => {
+    if(c.unscheduled) return false;
+    if(filters.status!=='All' && STATUSES[c.status]!==filters.status) return false;
+    if(filters.channel!=='All' && CHANNELS[c.channel]!==filters.channel) return false;
+    if(filters.type!=='All' && c.type!==filters.type) return false;
+    if(filters.segment!=='All' && c.segment!==filters.segment) return false;
+    return true;
+  });
+  const unscheduled = campaigns.filter(c=>c.unscheduled);
+
+  const getCampaignsForDay = (day) => filtered.filter(c=>!c.allDay&&fmtDate(c.startDate)===fmtDate(day));
+
+  const getSpanBars = () => {
+    const bars=[]; const shown=new Set();
+    filtered.filter(c=>c.allDay).forEach(c=>{
+      if(shown.has(c.id)) return;
+      const lastDay=weekDays[weekDays.length-1];
+      if(c.endDate<weekDays[0]||c.startDate>lastDay) return;
+      const colStart=Math.max(0,weekDays.findIndex(d=>sameDay(d,c.startDate)));
+      const eIdx=weekDays.findIndex(d=>sameDay(d,c.endDate));
+      const spanEnd=eIdx===-1?weekDays.length-1:eIdx;
+      const span=spanEnd-colStart+1;
+      if(span>0){bars.push({campaign:c,colStart,colSpan:span});shown.add(c.id);}
+    });
+    return bars;
+  };
+
+  // ── Drop handler ──
+  const handleDrop = useCallback((campaignId, targetDate) => {
+    // Normalize to midnight for comparison
+    const target = new Date(targetDate); target.setHours(0,0,0,0);
+    const todayMidnight = new Date(today); todayMidnight.setHours(0,0,0,0);
+    if(target < todayMidnight) {
+      setToast('⛔ Cannot schedule in the past');
+      setDragId(null);
+      return;
+    }
+    setCampaigns(prev => prev.map(c => {
+      if(c.id !== campaignId) return c;
+      const wasUnscheduled = !!c.unscheduled;
+      if(wasUnscheduled) {
+        const newC = { ...c, unscheduled:false, startDate:new Date(targetDate), endDate:new Date(targetDate) };
+        setToast(`"${c.name}" scheduled for ${targetDate.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`);
+        return newC;
+      } else {
+        const delta = Math.round((targetDate - c.startDate)/86400000);
+        if(delta===0) return c;
+        const newC = { ...c, startDate:addDays(c.startDate,delta), endDate:addDays(c.endDate,delta) };
+        setToast(`"${c.name}" moved to ${newC.startDate.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`);
+        return newC;
+      }
+    }));
+    setDragId(null);
+  }, []);
+
+  // ── Resize handler ──
+  const handleResize = useCallback((campaignId, newStart, newEnd) => {
+    setCampaigns(prev => prev.map(c => {
+      if(c.id !== campaignId) return c;
+      const updated = { ...c };
+      if(newStart){ updated.startDate = new Date(newStart); updated.startDate.setHours(0,0,0,0); }
+      if(newEnd){ updated.endDate = new Date(newEnd); updated.endDate.setHours(0,0,0,0); }
+      if(updated.startDate > updated.endDate) [updated.startDate, updated.endDate] = [updated.endDate, updated.startDate];
+      return updated;
+    }));
+    const c = campaigns.find(c=>c.id===campaignId);
+    setToast(`"${c?.name||'Campaign'}" dates updated`);
+  }, [campaigns]);
+
+  const navigate = (dir) => {
+    const d=new Date(currentDate);
+    if(viewMode==='week') d.setDate(d.getDate()+dir*7);
+    else d.setMonth(d.getMonth()+dir);
+    setCurrentDate(d);
+  };
+
+
+  useEffect(()=>{
+    window.addEventListener('message',(e)=>{
+      if(e.data?.type==='__activate_edit_mode') setTweaksOpen(true);
+      if(e.data?.type==='__deactivate_edit_mode') setTweaksOpen(false);
+    });
+    window.parent.postMessage({type:'__edit_mode_available'},'*');
+  },[]);
+
+  const setTweak=(k,v)=>{ setTweaks(t=>({...t,[k]:v})); window.parent.postMessage({type:'__edit_mode_set_keys',edits:{[k]:v}},'*'); };
+  const density = tweaks.density==='Compact';
+  const headerTitle = currentDate.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  const sideIcons = [
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="#94a3b8"/><rect x="10" y="2" width="6" height="6" rx="1.5" fill="#94a3b8"/><rect x="2" y="10" width="6" height="6" rx="1.5" fill="#94a3b8"/><rect x="10" y="10" width="6" height="6" rx="1.5" fill="#94a3b8"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><polyline points="2,14 6,9 10,11 16,4" stroke="#94a3b8" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke={INDIGO} strokeWidth="1.6" fill="none"/><path d="M6 2v4M12 2v4M2 8h14" stroke={INDIGO} strokeWidth="1.5" strokeLinecap="round"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 7v9h5v-5h4v5h5V7z" stroke="#94a3b8" strokeWidth="1.6" fill="none" strokeLinejoin="round"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7" r="3.5" stroke="#94a3b8" strokeWidth="1.6" fill="none"/><path d="M3 16c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="#94a3b8" strokeWidth="1.6" fill="none" strokeLinecap="round"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="14" height="14" rx="2" stroke="#94a3b8" strokeWidth="1.6" fill="none"/><path d="M6 6h6M6 9h4M6 12h5" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6" stroke="#94a3b8" strokeWidth="1.6" fill="none"/><path d="M9 3v6l3 3" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" stroke="#94a3b8" strokeWidth="1.6" fill="none"/><path d="M9 2v2M9 14v2M2 9h2M14 9h2M4.1 4.1l1.4 1.4M12.5 12.5l1.4 1.4M4.1 13.9l1.4-1.4M12.5 5.5l1.4-1.4" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round"/></svg>,
+  ];
+
+  return (
+    <DragCtx.Provider value={{ dragId, setDragId }}>
+      <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
+        {/* TOP NAV */}
+        <div style={{height:50,background:NAVY,display:'flex',alignItems:'center',padding:'0 18px',justifyContent:'space-between',flexShrink:0,zIndex:100}}>
+          <svg width="64" height="20" viewBox="0 0 64 20"><text x="0" y="15" fill="white" fontFamily="Inter,sans-serif" fontWeight="700" fontSize="16" letterSpacing="-0.5">AIQUA</text></svg>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <button style={{display:'flex',alignItems:'center',gap:6,background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:7,padding:'5px 12px',color:'white',fontSize:12,cursor:'pointer'}}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" fill="white" opacity=".7"/><rect x="8" y="1" width="5" height="5" rx="1" fill="white" opacity=".7"/><rect x="1" y="8" width="5" height="5" rx="1" fill="white" opacity=".7"/><rect x="8" y="8" width="5" height="5" rx="1" fill="white" opacity=".7"/></svg>
+              Project name
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="white" strokeWidth="1.3" strokeOpacity=".6" strokeLinecap="round"/></svg>
+            </button>
+            <div style={{display:'flex',alignItems:'center',gap:7,background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:7,padding:'4px 10px',cursor:'pointer'}}>
+              <div style={{width:22,height:22,borderRadius:'50%',background:'#6366f1',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'white'}}>UN</div>
+              <span style={{fontSize:12,color:'white'}}>UserName</span>
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="white" strokeWidth="1.3" strokeOpacity=".6" strokeLinecap="round"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div style={{display:'flex',flex:1,overflow:'hidden'}}>
+          {/* SIDEBAR */}
+          <div style={{width:48,background:'white',borderRight:'1px solid #f0f0f4',display:'flex',flexDirection:'column',alignItems:'center',padding:'16px 0',gap:6,flexShrink:0}}>
+            <button style={{width:32,height:32,background:'none',border:'none',cursor:'pointer',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',marginBottom:8}}>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 4h14M2 9h14M2 14h14" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round"/></svg>
+            </button>
+            {sideIcons.map((icon,i)=>(
+              <button key={i} style={{width:36,height:36,background:i===2?INDIGO_LIGHT:'none',border:'none',cursor:'pointer',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center'}}>{icon}</button>
+            ))}
+          </div>
+
+          {/* MAIN */}
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+            {/* Breadcrumb */}
+            <div style={{height:44,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',borderBottom:'1px solid #f0f0f4',background:'white',flexShrink:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:6,fontSize:13,color:'#6b7280'}}>
+                <span style={{cursor:'pointer'}} onMouseEnter={e=>e.target.style.color=INDIGO} onMouseLeave={e=>e.target.style.color='#6b7280'}>Programs</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                <span style={{color:NAVY,fontWeight:500}}>Mother's Day GMV uplift</span>
+              </div>
+              <button style={{display:'flex',alignItems:'center',gap:6,background:'none',border:'1px solid #e5e7eb',borderRadius:7,padding:'5px 12px',fontSize:12,fontWeight:500,color:'#374151',cursor:'pointer'}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=INDIGO;e.currentTarget.style.color=INDIGO;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor='#e5e7eb';e.currentTarget.style.color='#374151';}}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round"/></svg>
+                Edit program
+              </button>
+            </div>
+
+            {/* Title + tabs */}
+            <div style={{padding:'18px 24px 0',background:'white',flexShrink:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+                <div style={{width:32,height:32,background:INDIGO_LIGHT,borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="4" width="14" height="10" rx="2" stroke={INDIGO} strokeWidth="1.7" fill="none"/><path d="M6 2v4M12 2v4M2 8h14" stroke={INDIGO} strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </div>
+                <h1 style={{fontSize:20,fontWeight:700,color:NAVY}}>Mother's Day GMV uplift</h1>
+              </div>
+              <div style={{display:'flex',borderBottom:'1px solid #f0f0f4'}}>
+                {['Performance','Campaigns'].map(t=>{
+                  const active=t==='Campaigns';
+                  return (
+                    <div key={t} style={{padding:'9px 16px',fontSize:13,fontWeight:600,cursor:'pointer',color:active?INDIGO:'#6b7280',borderBottom:active?`2px solid ${INDIGO}`:'2px solid transparent',marginBottom:-1,display:'flex',alignItems:'center',gap:6}}>
+                      {t}{t==='Campaigns'&&<span style={{background:INDIGO,color:'white',borderRadius:20,padding:'1px 6px',fontSize:10,fontWeight:700}}>99</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Filter bar */}
+            <div style={{padding:'12px 24px',background:'white',borderBottom:'1px solid #f0f0f4',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
+              <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                <FilterPill label="Status" value={filters.status} options={['All','Draft','Inactive','Reviewing','Paused','Archived','Testing','Scheduled','Active','Completed','Rejected']} onChange={v=>setFilters(f=>({...f,status:v}))}/>
+                <FilterPill label="Channel" value={filters.channel} options={['All',...Object.values(CHANNELS)]} onChange={v=>setFilters(f=>({...f,channel:v}))}/>
+                <FilterPill label="Type" value={filters.type} options={['All','Manual sent','Automated','Scheduled','Recurring','Triggered']} onChange={v=>setFilters(f=>({...f,type:v}))}/>
+                <FilterPill label="Tag" value={filters.tag} options={['All','Sale','Retention','Onboarding','Win-back']} onChange={v=>setFilters(f=>({...f,tag:v}))}/>
+                <FilterPill label="Segment" value={filters.segment} options={['All','All users','VIP','New users','Dormant','Loyalty','Power users','Churned','At-risk','Free users']} onChange={v=>setFilters(f=>({...f,segment:v}))}/>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{display:'flex',border:'1px solid #e5e7eb',borderRadius:7,overflow:'hidden'}}>
+                  <button style={{width:32,height:28,background:INDIGO_LIGHT,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:INDIGO}}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/></svg>
+                  </button>
+                  <button style={{width:32,height:28,background:'white',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#9ca3af'}}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M2 7h10M2 10.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+                <button style={{padding:'6px 14px',background:INDIGO,color:'white',border:'none',borderRadius:7,fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}
+                  onMouseEnter={e=>e.currentTarget.style.background='#4338ca'}
+                  onMouseLeave={e=>e.currentTarget.style.background=INDIGO}>
+                  + Add campaigns
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Calendar toolbar */}
+            <div style={{padding:'10px 24px',background:'white',borderBottom:'1px solid #f0f0f4',flexShrink:0,display:'flex',alignItems:'center',gap:10}}>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:16,fontWeight:700,color:NAVY,minWidth:110}}>{headerTitle}</span>
+                <button onClick={()=>navigate(-1)} style={{width:26,height:26,background:'none',border:'1px solid #e5e7eb',borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#6b7280'}}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M6.5 2L3.5 5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
+                <button onClick={()=>setCurrentDate(new Date(2025,0,29))} style={{padding:'3px 10px',background:'none',border:'1px solid #e5e7eb',borderRadius:5,fontSize:12,color:'#374151',cursor:'pointer'}}>Today</button>
+                <button onClick={()=>navigate(1)} style={{width:26,height:26,background:'none',border:'1px solid #e5e7eb',borderRadius:5,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',color:'#6b7280'}}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M3.5 2l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </button>
+              </div>
+              <div style={{display:'flex',background:'#f3f4f6',borderRadius:7,padding:2}}>
+                {['Month','Week'].map(v=>(
+                  <button key={v} onClick={()=>setViewMode(v.toLowerCase())} style={{padding:'4px 14px',fontSize:12,fontWeight:600,border:'none',borderRadius:5,cursor:'pointer',background:viewMode===v.toLowerCase()?'white':'transparent',color:viewMode===v.toLowerCase()?NAVY:'#9ca3af',boxShadow:viewMode===v.toLowerCase()?'0 1px 4px rgba(0,0,0,0.08)':'none',transition:'all 0.15s'}}>{v}</button>
+                ))}
+              </div>
+              <button onClick={()=>setShowUnscheduled(o=>!o)} style={{padding:'4px 12px',background:showUnscheduled?INDIGO_LIGHT:'#f9fafb',border:`1px solid ${showUnscheduled?INDIGO_MID:'#e5e7eb'}`,borderRadius:7,fontSize:12,fontWeight:600,color:showUnscheduled?INDIGO:'#374151',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x="1" y="2" width="9" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2" fill="none"/><path d="M4 1v2M7 1v2M1 5h9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                Unscheduled ({unscheduled.length})
+              </button>
+            </div>
+
+            {/* Calendar body */}
+            <div style={{flex:1,overflow:'auto',background:'#f8f9fc'}}>
+              {viewMode==='week'
+                ? <WeekView weekDays={weekDays} filtered={filtered} today={today} onCampaignClick={setSelectedCampaign} density={density} onDrop={handleDrop} onResize={handleResize} onCreateClick={d=>setCreateForDate(d)}/>
+                : <MonthView currentDate={currentDate} calCells={calCells} monthStart={monthStart} monthEnd={monthEnd} filtered={filtered} today={today} onCampaignClick={setSelectedCampaign} onDrop={handleDrop} onResize={handleResize} onCreateClick={d=>setCreateForDate(d)}/>
+              }
+            </div>
+          </div>
+
+          {/* Unscheduled side panel */}
+          {showUnscheduled && <UnscheduledPanel campaigns={unscheduled} onClose={()=>setShowUnscheduled(false)}/>}
+        </div>
+
+        {selectedCampaign && <CampaignModal campaign={selectedCampaign} onClose={()=>setSelectedCampaign(null)}/>}
+        {createForDate && <CreateCampaignModal defaultDate={createForDate} onClose={()=>setCreateForDate(null)} onCreate={({name,channel,startDate,sendTime,sto})=>{
+          const d=startDate?new Date(startDate+'T00:00:00'):createForDate;
+          setCampaigns(prev=>[...prev,{id:Date.now(),name,channel,status:'draft',type:'Manual sent',segment:'All',startDate:d,endDate:d,time:sendTime||'0:00',allDay:false}]);
+          setToast(`"${name}" created for ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`);
+        }}/>}
+        {toast && <Toast msg={toast} onDone={()=>setToast(null)}/>}
+
+        <div className={`tweaks-panel ${tweaksOpen?'open':''}`}>
+          <h4>Tweaks</h4>
+          <div className="tweak-row"><label>Density</label><select className="tweak-select" value={tweaks.density} onChange={e=>setTweak('density',e.target.value)}><option>Comfortable</option><option>Compact</option></select></div>
+          <div className="tweak-row"><label>Weekends</label><div className={`tweak-toggle ${tweaks.showWeekends?'on':''}`} onClick={()=>setTweak('showWeekends',!tweaks.showWeekends)}/></div>
+          <div className="tweak-row"><label>Color by</label><select className="tweak-select" value={tweaks.colorBy} onChange={e=>setTweak('colorBy',e.target.value)}><option>Channel</option><option>Status</option></select></div>
+        </div>
+      </div>
+    </DragCtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

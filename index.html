@@ -15,10 +15,10 @@
     <!-- Calendar grid -->
     <rect x="10" y="18" width="100" height="54" rx="4" fill="#ffffff" opacity="0.06"/>
     <!-- Header row -->
-    <rect x="10" y="18" width="100" height="12" rx="4" fill="#4f46e5" opacity="0.5"/>
+    <rect x="10" y="18" width="100" height="12" rx="4" fill="#296AFF" opacity="0.5"/>
     <!-- Day cols -->
     <rect x="10" y="30" width="14" height="42" rx="0" fill="#ffffff" opacity="0.03"/>
-    <rect x="25" y="30" width="14" height="42" rx="0" fill="#4f46e5" opacity="0.06"/>
+    <rect x="25" y="30" width="14" height="42" rx="0" fill="#296AFF" opacity="0.06"/>
     <!-- Campaign bars -->
     <rect x="12" y="34" width="9" height="5" rx="1.5" fill="#a78bfa" opacity="0.8"/>
     <rect x="12" y="42" width="9" height="5" rx="1.5" fill="#93c5fd" opacity="0.8"/>
@@ -42,7 +42,7 @@
   ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 
   .drop-zone-active {
-    background: #ede9fe !important;
+    background: #e8f0ff !important;
     outline: 2px dashed #a78bfa !important;
     outline-offset: -2px;
   }
@@ -60,7 +60,7 @@
   .tweak-row label { color: #374151; }
   .tweak-select { font-size: 12px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 3px 6px; background: white; cursor: pointer; }
   .tweak-toggle { width: 34px; height: 18px; background: #d1d5db; border-radius: 9px; cursor: pointer; position: relative; transition: background 0.2s; }
-  .tweak-toggle.on { background: #4f46e5; }
+  .tweak-toggle.on { background: #296AFF; }
   .tweak-toggle::after { content:''; position:absolute; top:2px; left:2px; width:14px; height:14px; background:white; border-radius:50%; transition: left 0.2s; }
   .tweak-toggle.on::after { left: 18px; }
 
@@ -77,9 +77,9 @@
 const { useState, useRef, useEffect, useCallback, createContext, useContext } = React;
 
 const NAVY        = '#1e2340';
-const INDIGO      = '#4f46e5';
-const INDIGO_LIGHT= '#ede9fe';
-const INDIGO_MID  = '#c4b5fd';
+const INDIGO      = '#296AFF';
+const INDIGO_LIGHT= '#e8f0ff';
+const INDIGO_MID  = '#a3bfff';
 
 const CHANNELS = { sms:'SMS', email:'Email', push:'Push', inapp:'In-App' };
 
@@ -107,7 +107,7 @@ const STATUS_CARD_COLORS = {
   // Green — Active
   active:    { bg:'#e8f5e9', border:'#81c784', text:'#1b5e20', dot:'#4caf50' },
   // Indigo/violet — Completed
-  completed: { bg:'#ede9fe', border:'#c4b5fd', text:'#5b21b6', dot:'#7c3aed' },
+  completed: { bg:'#e8f0ff', border:'#a3bfff', text:'#1a4ecc', dot:'#296AFF' },
   // Pink — Rejected
   rejected:  { bg:'#fce4ec', border:'#f48fb1', text:'#880e4f', dot:'#e91e63' },
 };
@@ -116,7 +116,7 @@ const STATUS_CARD_COLORS = {
 const STATUS_BADGE = {
   scheduled: { bg:'#e0f7fa', text:'#006064' },
   active:    { bg:'#e8f5e9', text:'#1b5e20' },
-  completed: { bg:'#ede9fe', text:'#5b21b6' },
+  completed: { bg:'#e8f0ff', text:'#1a4ecc' },
   rejected:  { bg:'#fce4ec', text:'#880e4f' },
   draft:     { bg:'#f3f4f6', text:'#6b7280' },
   inactive:  { bg:'#f3f4f6', text:'#6b7280' },
@@ -129,7 +129,7 @@ const STATUS_BADGE = {
 
 // Keep channel colors for icons only (not card bg)
 const CHANNEL_COLORS = {
-  sms:   { bg:'#ede9fe', border:'#a78bfa', text:'#5b21b6' },
+  sms:   { bg:'#e8f0ff', border:'#a78bfa', text:'#1a4ecc' },
   email: { bg:'#dbeafe', border:'#93c5fd', text:'#1d4ed8' },
   push:  { bg:'#dcfce7', border:'#86efac', text:'#15803d' },
   inapp: { bg:'#fce7f3', border:'#f9a8d4', text:'#be185d' },
@@ -1189,7 +1189,7 @@ function App() {
                   </button>
                 </div>
                 <button style={{padding:'6px 14px',background:INDIGO,color:'white',border:'none',borderRadius:7,fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}
-                  onMouseEnter={e=>e.currentTarget.style.background='#4338ca'}
+                  onMouseEnter={e=>e.currentTarget.style.background='#1a55e0'}
                   onMouseLeave={e=>e.currentTarget.style.background=INDIGO}>
                   + Add campaigns
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>

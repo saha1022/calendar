@@ -4,9 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Campaign Calendar – AIQUA</title>
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="/node_modules/react/umd/react.development.js"></script>
+<script src="/node_modules/react-dom/umd/react-dom.development.js"></script>
+<script src="/node_modules/@babel/standalone/babel.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <template id="__bundler_thumbnail" data-bg-color="#1e2340">
@@ -142,25 +142,25 @@ function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; 
 function sameDay(a,b){ return fmtDate(a)===fmtDate(b); }
 
 const INIT_CAMPAIGNS = [
-  { id:1,  name:'Blue Monday sales',         channel:'email', status:'completed', type:'Recurring',   segment:'All users',   startDate:makeDate(2025,1,28), endDate:makeDate(2025,2,4),  time:'09:00 AM', allDay:true  },
-  { id:2,  name:'New year sales',            channel:'sms',   status:'stopped',   type:'Manual sent', segment:'VIP',         startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'10:30 AM', allDay:false },
-  { id:3,  name:'New year sales',            channel:'sms',   status:'reviewing', type:'Manual sent', segment:'VIP',         startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'10:30 AM', allDay:false },
-  { id:4,  name:'New year sales',            channel:'sms',   status:'active',    type:'Manual sent', segment:'New users',   startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'11:00 AM', allDay:false },
-  { id:5,  name:'New year sales',            channel:'sms',   status:'draft',     type:'Manual sent', segment:'VIP',         startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'04:30 PM', allDay:false },
-  { id:6,  name:'Drive daily re-engagement', channel:'push',  status:'scheduled', type:'Automated',   segment:'Dormant',     startDate:makeDate(2025,1,30), endDate:makeDate(2025,2,1),  time:'10:30 AM', allDay:false },
-  { id:7,  name:'New year sales',            channel:'sms',   status:'paused',    type:'Manual sent', segment:'All',         startDate:makeDate(2025,2,2),  endDate:makeDate(2025,2,2),  time:'10:30 AM', allDay:false },
-  { id:8,  name:'Valentine prep',            channel:'email', status:'draft',     type:'Scheduled',   segment:'All users',   startDate:makeDate(2025,2,3),  endDate:makeDate(2025,2,3),  time:'08:00 AM', allDay:false },
-  { id:9,  name:'Re-engage dormant',         channel:'push',  status:'active',    type:'Automated',   segment:'Dormant',     startDate:makeDate(2025,2,1),  endDate:makeDate(2025,2,5),  time:'03:00 PM', allDay:true  },
-  { id:10, name:'Loyalty points reminder',   channel:'inapp', status:'scheduled', type:'Automated',   segment:'Loyalty',     startDate:makeDate(2025,2,3),  endDate:makeDate(2025,2,3),  time:'12:00 PM', allDay:false },
-  { id:11, name:'Flash sale weekend',        channel:'sms',   status:'rejected',  type:'Manual sent', segment:'All',         startDate:makeDate(2025,2,4),  endDate:makeDate(2025,2,5),  time:'10:00 AM', allDay:false },
-  { id:12, name:'App review prompt',         channel:'inapp', status:'testing',   type:'Triggered',   segment:'Power users', startDate:makeDate(2025,1,29), endDate:makeDate(2025,1,29), time:'02:00 PM', allDay:false },
-  { id:20, name:'Spring campaign draft',     channel:'email', status:'draft',     type:'Manual sent', segment:'All',         unscheduled:true },
-  { id:21, name:'Birthday flow',             channel:'sms',   status:'draft',     type:'Automated',   segment:'VIP',         unscheduled:true },
-  { id:22, name:'Win-back sequence',         channel:'push',  status:'draft',     type:'Automated',   segment:'Churned',     unscheduled:true },
-  { id:23, name:'Product launch teaser',     channel:'email', status:'draft',     type:'Scheduled',   segment:'All',         unscheduled:true },
-  { id:24, name:'Referral incentive',        channel:'inapp', status:'draft',     type:'Triggered',   segment:'Power users', unscheduled:true },
-  { id:25, name:'Churn prevention',          channel:'sms',   status:'draft',     type:'Automated',   segment:'At-risk',     unscheduled:true },
-  { id:26, name:'Upsell premium tier',       channel:'email', status:'draft',     type:'Manual sent', segment:'Free users',  unscheduled:true },
+  { id:1,  name:'Spring sale',               channel:'email', status:'completed', type:'Recurring',   segment:'All users',   startDate:makeDate(2026,4,7),  endDate:makeDate(2026,4,12), time:'09:00 AM', allDay:true  },
+  { id:2,  name:'Spring kickoff',            channel:'sms',   status:'stopped',   type:'Manual send', segment:'VIP',         startDate:makeDate(2026,4,10), endDate:makeDate(2026,4,10), time:'10:30 AM', allDay:false },
+  { id:3,  name:'May engagement blast',      channel:'sms',   status:'reviewing', type:'Manual send', segment:'VIP',         startDate:makeDate(2026,5,7),  endDate:makeDate(2026,5,7),  time:'10:30 AM', allDay:false },
+  { id:4,  name:'April push campaign',       channel:'sms',   status:'active',    type:'One-time',    segment:'New users',   startDate:makeDate(2026,4,28), endDate:makeDate(2026,4,28), time:'11:00 AM', allDay:false },
+  { id:5,  name:'Summer sale teaser',        channel:'sms',   status:'draft',     type:'Manual send', segment:'VIP',         startDate:makeDate(2026,5,9),  endDate:makeDate(2026,5,9),  time:'04:30 PM', allDay:false },
+  { id:6,  name:'Drive daily re-engagement', channel:'push',  status:'active',    type:'Journey',     segment:'Dormant',     startDate:makeDate(2026,4,27), endDate:makeDate(2026,5,3),  time:'10:30 AM', allDay:true  },
+  { id:7,  name:'Loyalty push',              channel:'sms',   status:'paused',    type:'Manual send', segment:'All',         startDate:makeDate(2026,4,21), endDate:makeDate(2026,4,21), time:'10:30 AM', allDay:false },
+  { id:8,  name:'Summer sale prep',          channel:'email', status:'draft',     type:'One-time',    segment:'All users',   startDate:makeDate(2026,5,11), endDate:makeDate(2026,5,11), time:'08:00 AM', allDay:false },
+  { id:9,  name:'Re-engage dormant',         channel:'push',  status:'completed', type:'Journey',     segment:'Dormant',     startDate:makeDate(2026,4,14), endDate:makeDate(2026,4,19), time:'03:00 PM', allDay:true  },
+  { id:10, name:'Loyalty points reminder',   channel:'inapp', status:'scheduled', type:'One-time',    segment:'Loyalty',     startDate:makeDate(2026,5,4),  endDate:makeDate(2026,5,4),  time:'12:00 PM', allDay:false },
+  { id:11, name:'Flash sale weekend',        channel:'sms',   status:'rejected',  type:'Manual send', segment:'All',         startDate:makeDate(2026,5,8),  endDate:makeDate(2026,5,8),  time:'10:00 AM', allDay:false },
+  { id:12, name:'App review prompt',         channel:'inapp', status:'completed', type:'One-time',    segment:'Power users', startDate:makeDate(2026,4,15), endDate:makeDate(2026,4,15), time:'02:00 PM', allDay:false },
+  { id:20, name:'Spring campaign draft',     channel:'email', status:'draft',     type:'Manual send', segment:'All',         unscheduled:true },
+  { id:21, name:'Birthday flow',             channel:'sms',   status:'draft',     type:'Journey',     segment:'VIP',         unscheduled:true },
+  { id:22, name:'Win-back sequence',         channel:'push',  status:'draft',     type:'Journey',     segment:'Churned',     unscheduled:true },
+  { id:23, name:'Product launch teaser',     channel:'email', status:'draft',     type:'One-time',    segment:'All',         unscheduled:true },
+  { id:24, name:'Referral incentive',        channel:'inapp', status:'draft',     type:'One-time',    segment:'Power users', unscheduled:true },
+  { id:25, name:'Churn prevention',          channel:'sms',   status:'draft',     type:'Journey',     segment:'At-risk',     unscheduled:true },
+  { id:26, name:'Upsell premium tier',       channel:'email', status:'draft',     type:'Manual send', segment:'Free users',  unscheduled:true },
 ];
 
 // ── Drag context ─────────────────────────────────────────────

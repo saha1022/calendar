@@ -570,6 +570,7 @@ function addDays(d, n) {
 function sameDay(a, b) {
   return fmtDate(a) === fmtDate(b);
 }
+const today = new Date();
 const INIT_CAMPAIGNS = [{
   id: 1,
   name: 'Spring sale',
@@ -577,8 +578,8 @@ const INIT_CAMPAIGNS = [{
   status: 'completed',
   type: 'Recurring',
   segment: 'All users',
-  startDate: makeDate(2026, 4, 7),
-  endDate: makeDate(2026, 4, 12),
+  startDate: addDays(today, -21),
+  endDate: addDays(today, -16),
   time: '09:00 AM',
   allDay: true
 }, {
@@ -588,8 +589,8 @@ const INIT_CAMPAIGNS = [{
   status: 'stopped',
   type: 'Manual send',
   segment: 'VIP',
-  startDate: makeDate(2026, 4, 10),
-  endDate: makeDate(2026, 4, 10),
+  startDate: addDays(today, -18),
+  endDate: addDays(today, -18),
   time: '10:30 AM',
   allDay: false
 }, {
@@ -599,8 +600,8 @@ const INIT_CAMPAIGNS = [{
   status: 'reviewing',
   type: 'Manual send',
   segment: 'VIP',
-  startDate: makeDate(2026, 5, 7),
-  endDate: makeDate(2026, 5, 7),
+  startDate: addDays(today, +9),
+  endDate: addDays(today, +9),
   time: '10:30 AM',
   allDay: false
 }, {
@@ -610,8 +611,8 @@ const INIT_CAMPAIGNS = [{
   status: 'active',
   type: 'One-time',
   segment: 'New users',
-  startDate: makeDate(2026, 4, 28),
-  endDate: makeDate(2026, 4, 28),
+  startDate: addDays(today, 0),
+  endDate: addDays(today, 0),
   time: '11:00 AM',
   allDay: false
 }, {
@@ -621,8 +622,8 @@ const INIT_CAMPAIGNS = [{
   status: 'draft',
   type: 'Manual send',
   segment: 'VIP',
-  startDate: makeDate(2026, 5, 9),
-  endDate: makeDate(2026, 5, 9),
+  startDate: addDays(today, +11),
+  endDate: addDays(today, +11),
   time: '04:30 PM',
   allDay: false
 }, {
@@ -632,8 +633,8 @@ const INIT_CAMPAIGNS = [{
   status: 'active',
   type: 'Journey',
   segment: 'Dormant',
-  startDate: makeDate(2026, 4, 27),
-  endDate: makeDate(2026, 5, 3),
+  startDate: addDays(today, -1),
+  endDate: addDays(today, +5),
   time: '10:30 AM',
   allDay: true
 }, {
@@ -643,8 +644,8 @@ const INIT_CAMPAIGNS = [{
   status: 'paused',
   type: 'Manual send',
   segment: 'All',
-  startDate: makeDate(2026, 4, 21),
-  endDate: makeDate(2026, 4, 21),
+  startDate: addDays(today, -7),
+  endDate: addDays(today, -7),
   time: '10:30 AM',
   allDay: false
 }, {
@@ -654,8 +655,8 @@ const INIT_CAMPAIGNS = [{
   status: 'draft',
   type: 'One-time',
   segment: 'All users',
-  startDate: makeDate(2026, 5, 11),
-  endDate: makeDate(2026, 5, 11),
+  startDate: addDays(today, +13),
+  endDate: addDays(today, +13),
   time: '08:00 AM',
   allDay: false
 }, {
@@ -665,8 +666,8 @@ const INIT_CAMPAIGNS = [{
   status: 'completed',
   type: 'Journey',
   segment: 'Dormant',
-  startDate: makeDate(2026, 4, 14),
-  endDate: makeDate(2026, 4, 19),
+  startDate: addDays(today, -14),
+  endDate: addDays(today, -9),
   time: '03:00 PM',
   allDay: true
 }, {
@@ -676,8 +677,8 @@ const INIT_CAMPAIGNS = [{
   status: 'scheduled',
   type: 'One-time',
   segment: 'Loyalty',
-  startDate: makeDate(2026, 5, 4),
-  endDate: makeDate(2026, 5, 4),
+  startDate: addDays(today, +6),
+  endDate: addDays(today, +6),
   time: '12:00 PM',
   allDay: false
 }, {
@@ -687,8 +688,8 @@ const INIT_CAMPAIGNS = [{
   status: 'rejected',
   type: 'Manual send',
   segment: 'All',
-  startDate: makeDate(2026, 5, 8),
-  endDate: makeDate(2026, 5, 8),
+  startDate: addDays(today, +10),
+  endDate: addDays(today, +10),
   time: '10:00 AM',
   allDay: false
 }, {
@@ -698,8 +699,8 @@ const INIT_CAMPAIGNS = [{
   status: 'completed',
   type: 'One-time',
   segment: 'Power users',
-  startDate: makeDate(2026, 4, 15),
-  endDate: makeDate(2026, 4, 15),
+  startDate: addDays(today, -13),
+  endDate: addDays(today, -13),
   time: '02:00 PM',
   allDay: false
 }, {

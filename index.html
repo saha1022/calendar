@@ -2333,7 +2333,7 @@ function WeekView({
   const N = weekDays.length;
 
   // Split: multi-day spans vs single-day items
-  const isMultiDay = c => fmtDate(c.startDate) !== fmtDate(c.endDate);
+  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || ['Recurring', 'Journey'].includes(c.type);
   const visibleSpans = filtered.filter(c => isMultiDay(c)).filter(c => {
     const last = weekDays[N - 1];
     return c.startDate <= last && c.endDate >= weekDays[0];
@@ -2885,7 +2885,7 @@ function MonthView({
   onCreateClick
 }) {
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const isMultiDay = c => fmtDate(c.startDate) !== fmtDate(c.endDate);
+  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || ['Recurring', 'Journey'].includes(c.type);
   const allMultiDay = filtered.filter(isMultiDay);
   const getSingleDay = day => filtered.filter(c => !isMultiDay(c) && fmtDate(c.startDate) === fmtDate(day));
   const weeks = Array.from({

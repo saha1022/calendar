@@ -890,7 +890,6 @@ function CampaignCard({
     className: isDragging ? 'card-dragging' : '',
     style: {
       background: sc.bg,
-      border: `1px solid ${sc.border}`,
       borderRadius: 6,
       padding: compact ? '4px 6px' : '5px 7px',
       marginBottom: 3,
@@ -1227,8 +1226,6 @@ function SpanBar({
       width: '100%',
       height: 22,
       background: cc.bg,
-      borderTop: `1.5px solid ${cc.border}`,
-      borderBottom: `1.5px solid ${cc.border}`,
       borderLeft: `4px solid ${cc.border}`,
       borderRight: `4px solid ${cc.border}`,
       borderRadius: 4,
@@ -2336,7 +2333,7 @@ function WeekView({
   const N = weekDays.length;
 
   // Split: multi-day spans vs single-day items
-  const isMultiDay = c => fmtDate(c.startDate) !== fmtDate(c.endDate);
+  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || ['Recurring', 'Journey'].includes(c.type);
   const visibleSpans = filtered.filter(c => isMultiDay(c)).filter(c => {
     const last = weekDays[N - 1];
     return c.startDate <= last && c.endDate >= weekDays[0];
@@ -2598,8 +2595,6 @@ function MonthSpanBar({
       left: isStart ? 3 : 0,
       right: isEnd ? 3 : 0,
       background: cc.bg,
-      borderTop: `1.5px solid ${cc.border}`,
-      borderBottom: `1.5px solid ${cc.border}`,
       borderLeft: isStart ? `4px solid ${cc.border}` : 'none',
       borderRight: isEnd ? `4px solid ${cc.border}` : 'none',
       borderTopLeftRadius: isStart ? 4 : 0,
@@ -2890,7 +2885,7 @@ function MonthView({
   onCreateClick
 }) {
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const isMultiDay = c => fmtDate(c.startDate) !== fmtDate(c.endDate);
+  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || ['Recurring', 'Journey'].includes(c.type);
   const allMultiDay = filtered.filter(isMultiDay);
   const getSingleDay = day => filtered.filter(c => !isMultiDay(c) && fmtDate(c.startDate) === fmtDate(day));
   const weeks = Array.from({

@@ -590,10 +590,7 @@ const INIT_CAMPAIGNS = [{
   status: 'stopped',
   type: 'Manual send',
   segment: 'VIP',
-  startDate: addDays(today, -18),
-  endDate: addDays(today, -18),
-  time: '10:30 AM',
-  allDay: false
+  unscheduled: true
 }, {
   id: 3,
   name: 'May engagement blast',
@@ -601,10 +598,7 @@ const INIT_CAMPAIGNS = [{
   status: 'reviewing',
   type: 'Manual send',
   segment: 'VIP',
-  startDate: addDays(today, +9),
-  endDate: addDays(today, +9),
-  time: '10:30 AM',
-  allDay: false
+  unscheduled: true
 }, {
   id: 4,
   name: 'April push campaign',
@@ -623,10 +617,7 @@ const INIT_CAMPAIGNS = [{
   status: 'draft',
   type: 'Manual send',
   segment: 'VIP',
-  startDate: addDays(today, +11),
-  endDate: addDays(today, +11),
-  time: '04:30 PM',
-  allDay: false
+  unscheduled: true
 }, {
   id: 6,
   name: 'Drive daily re-engagement',
@@ -645,10 +636,7 @@ const INIT_CAMPAIGNS = [{
   status: 'paused',
   type: 'Manual send',
   segment: 'All',
-  startDate: addDays(today, -7),
-  endDate: addDays(today, -7),
-  time: '10:30 AM',
-  allDay: false
+  unscheduled: true
 }, {
   id: 8,
   name: 'Summer sale prep',
@@ -689,10 +677,7 @@ const INIT_CAMPAIGNS = [{
   status: 'rejected',
   type: 'Manual send',
   segment: 'All',
-  startDate: addDays(today, +10),
-  endDate: addDays(today, +10),
-  time: '10:00 AM',
-  allDay: false
+  unscheduled: true
 }, {
   id: 12,
   name: 'App review prompt',
@@ -3023,6 +3008,7 @@ function App() {
         const newC = {
           ...c,
           unscheduled: false,
+          type: c.type === 'Manual send' ? 'One-time' : c.type,
           startDate: new Date(targetDate),
           endDate: new Date(targetDate)
         };
@@ -3967,23 +3953,16 @@ function App() {
       sendTime,
       sto
     }) => {
-      const d = startDate ? new Date(startDate + 'T00:00:00') : createForDate;
       setCampaigns(prev => [...prev, {
         id: Date.now(),
         name,
         channel,
         status: 'draft',
-        type: 'Manual sent',
+        type: 'Manual send',
         segment: 'All',
-        startDate: d,
-        endDate: d,
-        time: sendTime || '0:00',
-        allDay: false
+        unscheduled: true
       }]);
-      setToast(`"${name}" created for ${d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      })}`);
+      setToast(`"${name}" created and added to Unscheduled`);
     }
   }), toast && /*#__PURE__*/React.createElement(Toast, {
     msg: toast,

@@ -2415,13 +2415,14 @@ function WeekView({
         fontWeight: isToday ? 700 : 600
       }
     }, day.getDate()));
-  })), rows.length > 0 && /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
     "data-span-container": true,
     style: {
       position: 'relative',
       background: 'white',
       borderBottom: '1px solid #f0f0f4',
       height: spanSectionH,
+      minHeight: ROW_H + 8,
       overflow: 'hidden'
     }
   }, /*#__PURE__*/React.createElement("div", {

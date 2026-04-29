@@ -2221,6 +2221,7 @@ function WeekDayCell({
   total,
   isToday,
   density,
+  cellMinH,
   onCampaignClick,
   onDrop,
   onCreateClick
@@ -2236,7 +2237,7 @@ function WeekDayCell({
     onMouseEnter: () => setHov(true),
     onMouseLeave: () => setHov(false),
     style: {
-      minHeight: density ? 140 : 180,
+      minHeight: cellMinH ?? (density ? 140 : 180),
       padding: density ? '6px 5px' : '8px 7px',
       overflow: 'hidden',
       minWidth: 0,
@@ -2368,6 +2369,19 @@ function WeekView({
   const ROW_H = 28; // px per span row
   const spanSectionH = rows.length > 0 ? rows.length * ROW_H + 8 : 0;
 
+  const gridRef = useRef(null);
+  const [cellMinH, setCellMinH] = useState(density ? 140 : 180);
+  useLayoutEffect(() => {
+    function update() {
+      if (!gridRef.current) return;
+      const top = gridRef.current.getBoundingClientRect().top;
+      setCellMinH(Math.max(density ? 140 : 180, window.innerHeight - top - 24));
+    }
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [density, spanSectionH]);
+
   // Single-day campaigns per day cell
   const getSingleDay = day => filtered.filter(c => !isMultiDay(c) && fmtDate(c.startDate) === fmtDate(day));
   return /*#__PURE__*/React.createElement("div", {
@@ -2459,6 +2473,7 @@ function WeekView({
     numCols: N,
     onResize: onResize
   }))))), /*#__PURE__*/React.createElement("div", {
+    ref: gridRef,
     style: {
       display: 'grid',
       gridTemplateColumns: `repeat(${N},1fr)`
@@ -2471,6 +2486,7 @@ function WeekView({
     total: N,
     isToday: sameDay(day, today),
     density: density,
+    cellMinH: cellMinH,
     onCampaignClick: onCampaignClick,
     onDrop: onDrop,
     onCreateClick: onCreateClick

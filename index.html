@@ -2923,7 +2923,7 @@ function MonthView({
 function App() {
   const [campaigns, setCampaigns] = useState(INIT_CAMPAIGNS);
   const [viewMode, setViewMode] = useState('week');
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 0, 29));
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [filters, setFilters] = useState({
     status: 'All',
     channel: 'All',
@@ -2957,7 +2957,7 @@ function App() {
   const calCells = Array.from({
     length: 42
   }, (_, i) => addDays(calStart, i));
-  const today = new Date(2025, 0, 1);
+  const today = new Date();
   const filtered = campaigns.filter(c => {
     if (c.unscheduled) return false;
     if (filters.status !== 'All' && STATUSES[c.status] !== filters.status) return false;

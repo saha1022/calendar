@@ -571,6 +571,36 @@ function addDays(d, n) {
 function sameDay(a, b) {
   return fmtDate(a) === fmtDate(b);
 }
+
+// Expand recurring campaigns into individual occurrence objects for calendar rendering.
+// Each occurrence shares the original campaign's id so clicking any opens the same modal.
+function expandRecurringCampaigns(campaigns) {
+  const result = [];
+  for (const c of campaigns) {
+    if (c.type === 'Recurring' && c.recurrence) {
+      const { frequency, daysOfWeek, endDate } = c.recurrence;
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      let cur = new Date(c.startDate);
+      cur.setHours(0, 0, 0, 0);
+      while (cur <= end) {
+        const dow = cur.getDay();
+        const include =
+          frequency === 'daily' ||
+          (frequency === 'weekly' && Array.isArray(daysOfWeek) && daysOfWeek.includes(dow)) ||
+          (frequency === 'monthly' && cur.getDate() === new Date(c.startDate).getDate());
+        if (include) {
+          result.push({ ...c, startDate: new Date(cur), endDate: new Date(cur), _isRecurringOccurrence: true });
+        }
+        cur = addDays(cur, 1);
+      }
+    } else {
+      result.push(c);
+    }
+  }
+  return result;
+}
+
 const today = new Date();
 const INIT_CAMPAIGNS = [{
   id: 1,
@@ -745,6 +775,19 @@ const INIT_CAMPAIGNS = [{
   type: 'Manual send',
   segment: 'Free users',
   unscheduled: true
+}, {
+  id: 27,
+  name: 'Free Shipping Day',
+  channel: 'email',
+  status: 'active',
+  type: 'Recurring',
+  segment: 'All users',
+  startDate: addDays(today, (3 - today.getDay() + 7) % 7),
+  recurrence: {
+    frequency: 'weekly',
+    daysOfWeek: [3],
+    endDate: addDays(today, ((3 - today.getDay() + 7) % 7) + 28)
+  }
 }];
 
 // ── Drag context ─────────────────────────────────────────────
@@ -848,6 +891,7 @@ function CampaignCard({
   const badge = STATUS_BADGE[campaign.status] || STATUS_BADGE.draft;
   const chColor = CHANNEL_COLORS[campaign.channel]?.text || '#6b7280';
   const isDragging = dragId === campaign.id;
+  const isRecurringOccurrence = !!campaign._isRecurringOccurrence;
   const onMouseEnter = () => {
     setHov(true);
     if (ref.current) {
@@ -859,6 +903,7 @@ function CampaignCard({
     }
   };
   const onDragStart = e => {
+    if (isRecurringOccurrence) { e.preventDefault(); return; }
     setDragId(campaign.id);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('campaignId', String(campaign.id));
@@ -866,7 +911,7 @@ function CampaignCard({
   const onDragEnd = () => setDragId(null);
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     ref: ref,
-    draggable: true,
+    draggable: !isRecurringOccurrence,
     onDragStart: onDragStart,
     onDragEnd: onDragEnd,
     onMouseEnter: onMouseEnter,
@@ -878,7 +923,7 @@ function CampaignCard({
       borderRadius: 6,
       padding: compact ? '4px 6px' : '5px 7px',
       marginBottom: 3,
-      cursor: 'grab',
+      cursor: isRecurringOccurrence ? 'pointer' : 'grab',
       userSelect: 'none',
       transition: 'box-shadow 0.15s, transform 0.1s, opacity 0.15s',
       overflow: 'hidden',
@@ -1375,6 +1420,10 @@ function CreateCampaignModal({
   const [sendTime, setSendTime] = useState('0:00');
   const [sto, setSto] = useState(false);
   const [channelOpen, setChannelOpen] = useState(false);
+  const [campaignType, setCampaignType] = useState('one-time');
+  const [recurFrequency, setRecurFrequency] = useState('weekly');
+  const [recurDays, setRecurDays] = useState([3]);
+  const [recurEndDate, setRecurEndDate] = useState('');
   const channelRef = useRef(null);
   useEffect(() => {
     const h = e => {
@@ -1383,15 +1432,14 @@ function CreateCampaignModal({
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, []);
+  const canConfirm = name.trim() && (campaignType === 'one-time' || (startDate && recurEndDate && (recurFrequency !== 'weekly' || recurDays.length > 0)));
   const handleConfirm = () => {
-    if (!name.trim()) return;
-    onCreate({
-      name: name.trim(),
-      channel: channel || 'email',
-      startDate,
-      sendTime,
-      sto
-    });
+    if (!canConfirm) return;
+    if (campaignType === 'recurring') {
+      onCreate({ name: name.trim(), channel: channel || 'email', startDate, sendTime, sto, campaignType: 'recurring', recurrence: { frequency: recurFrequency, daysOfWeek: recurFrequency === 'weekly' ? recurDays : undefined, endDate: new Date(recurEndDate + 'T00:00:00') } });
+    } else {
+      onCreate({ name: name.trim(), channel: channel || 'email', startDate, sendTime, sto, campaignType: 'one-time' });
+    }
     onClose();
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -1540,100 +1588,58 @@ function CreateCampaignModal({
     channel: k,
     size: 13,
     color: channel === k ? INDIGO : '#6b7280'
-  }), v)))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 12
-    }
+  }), v)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 }
+  }, "Campaign type"), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', gap: 8 }
+  }, ['one-time', 'recurring'].map(t => /*#__PURE__*/React.createElement("button", {
+    key: t, onClick: () => setCampaignType(t),
+    style: { flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${campaignType === t ? INDIGO : '#e5e7eb'}`, background: campaignType === t ? INDIGO_LIGHT : 'white', color: campaignType === t ? INDIGO : '#6b7280', transition: 'all 0.15s' }
+  }, t === 'one-time' ? 'One-time' : 'Recurring')))),
+  campaignType === 'one-time' && /*#__PURE__*/React.createElement("div", {
+    style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: 'block',
-      fontSize: 13,
-      fontWeight: 600,
-      color: NAVY,
-      marginBottom: 6
-    }
-  }, "Start date"), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: 'relative'
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    type: "date",
-    value: startDate,
-    onChange: e => setStartDate(e.target.value),
-    style: {
-      width: '100%',
-      padding: '9px 12px',
-      border: '1px solid #e5e7eb',
-      borderRadius: 8,
-      fontSize: 13,
-      color: NAVY,
-      outline: 'none',
-      fontFamily: 'Inter,sans-serif'
-    },
-    onFocus: e => e.target.style.borderColor = INDIGO,
-    onBlur: e => e.target.style.borderColor = '#e5e7eb'
-  }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: 'block',
-      fontSize: 13,
-      fontWeight: 600,
-      color: NAVY,
-      marginBottom: 6
-    }
+    style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 }
+  }, "Start date"), /*#__PURE__*/React.createElement("input", {
+    type: "date", value: startDate, onChange: e => setStartDate(e.target.value),
+    style: { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, color: NAVY, outline: 'none', fontFamily: 'Inter,sans-serif' },
+    onFocus: e => e.target.style.borderColor = INDIGO, onBlur: e => e.target.style.borderColor = '#e5e7eb'
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 }
   }, "Send time"), /*#__PURE__*/React.createElement("input", {
-    type: "time",
-    value: sendTime,
-    onChange: e => setSendTime(e.target.value),
-    style: {
-      width: '100%',
-      padding: '9px 12px',
-      border: '1px solid #e5e7eb',
-      borderRadius: 8,
-      fontSize: 13,
-      color: NAVY,
-      outline: 'none',
-      fontFamily: 'Inter,sans-serif'
-    },
-    onFocus: e => e.target.style.borderColor = INDIGO,
-    onBlur: e => e.target.style.borderColor = '#e5e7eb'
-  }))), /*#__PURE__*/React.createElement("label", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      cursor: 'pointer',
-      fontSize: 13,
-      color: NAVY
-    }
+    type: "time", value: sendTime, onChange: e => setSendTime(e.target.value),
+    style: { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, color: NAVY, outline: 'none', fontFamily: 'Inter,sans-serif' },
+    onFocus: e => e.target.style.borderColor = INDIGO, onBlur: e => e.target.style.borderColor = '#e5e7eb'
+  }))),
+  campaignType === 'one-time' && /*#__PURE__*/React.createElement("label", {
+    style: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: NAVY }
   }, /*#__PURE__*/React.createElement("div", {
     onClick: () => setSto(s => !s),
-    style: {
-      width: 18,
-      height: 18,
-      borderRadius: 4,
-      border: `1.5px solid ${sto ? INDIGO : '#d1d5db'}`,
-      background: sto ? INDIGO : 'white',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      transition: 'all 0.15s',
-      cursor: 'pointer',
-      flexShrink: 0
-    }
-  }, sto && /*#__PURE__*/React.createElement("svg", {
-    width: "11",
-    height: "11",
-    viewBox: "0 0 11 11",
-    fill: "none"
-  }, /*#__PURE__*/React.createElement("path", {
-    d: "M2.5 5.5l2 2 4-4",
-    stroke: "white",
-    strokeWidth: "1.6",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }))), "Enable send time optimization")), /*#__PURE__*/React.createElement("div", {
+    style: { width: 18, height: 18, borderRadius: 4, border: `1.5px solid ${sto ? INDIGO : '#d1d5db'}`, background: sto ? INDIGO : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', cursor: 'pointer', flexShrink: 0 }
+  }, sto && /*#__PURE__*/React.createElement("svg", { width: "11", height: "11", viewBox: "0 0 11 11", fill: "none" },
+    /*#__PURE__*/React.createElement("path", { d: "M2.5 5.5l2 2 4-4", stroke: "white", strokeWidth: "1.6", strokeLinecap: "round", strokeLinejoin: "round" }))), "Enable send time optimization"),
+  campaignType === 'recurring' && /*#__PURE__*/React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
+    /*#__PURE__*/React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 } },
+      /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 } }, "First occurrence"),
+        /*#__PURE__*/React.createElement("input", { type: "date", value: startDate, onChange: e => setStartDate(e.target.value),
+          style: { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, color: NAVY, outline: 'none', fontFamily: 'Inter,sans-serif' },
+          onFocus: e => e.target.style.borderColor = INDIGO, onBlur: e => e.target.style.borderColor = '#e5e7eb' })),
+      /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 } }, "End date"),
+        /*#__PURE__*/React.createElement("input", { type: "date", value: recurEndDate, onChange: e => setRecurEndDate(e.target.value),
+          style: { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, color: NAVY, outline: 'none', fontFamily: 'Inter,sans-serif' },
+          onFocus: e => e.target.style.borderColor = INDIGO, onBlur: e => e.target.style.borderColor = '#e5e7eb' }))),
+    /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 } }, "Repeat"),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 8 } },
+        [['daily','Daily'],['weekly','Weekly'],['monthly','Monthly']].map(([val, label]) => /*#__PURE__*/React.createElement("button", {
+          key: val, onClick: () => setRecurFrequency(val),
+          style: { flex: 1, padding: '7px 0', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${recurFrequency === val ? INDIGO : '#e5e7eb'}`, background: recurFrequency === val ? INDIGO_LIGHT : 'white', color: recurFrequency === val ? INDIGO : '#6b7280', transition: 'all 0.15s' }
+        }, label)))),
+    recurFrequency === 'weekly' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", { style: { display: 'block', fontSize: 13, fontWeight: 600, color: NAVY, marginBottom: 6 } }, "Days of week"),
+      /*#__PURE__*/React.createElement("div", { style: { display: 'flex', gap: 4 } },
+        ['S','M','T','W','T','F','S'].map((d, i) => /*#__PURE__*/React.createElement("button", {
+          key: i, onClick: () => setRecurDays(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]),
+          style: { width: 34, height: 34, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${recurDays.includes(i) ? INDIGO : '#e5e7eb'}`, background: recurDays.includes(i) ? INDIGO : 'white', color: recurDays.includes(i) ? 'white' : '#6b7280', transition: 'all 0.15s' }
+        }, d))))), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '14px 24px',
       borderTop: '1px solid #f0f0f4',
@@ -1688,20 +1694,32 @@ function CreateCampaignModal({
     onClick: handleConfirm,
     style: {
       padding: '8px 20px',
-      background: name.trim() ? INDIGO : INDIGO_MID,
+      background: canConfirm ? INDIGO : INDIGO_MID,
       color: 'white',
       border: 'none',
       borderRadius: 8,
       fontSize: 13,
       fontWeight: 600,
-      cursor: name.trim() ? 'pointer' : 'not-allowed',
-      opacity: name.trim() ? 1 : 0.7,
+      cursor: canConfirm ? 'pointer' : 'not-allowed',
+      opacity: canConfirm ? 1 : 0.7,
       transition: 'all 0.15s'
     }
   }, "Confirm")))));
 }
 
 // ── Campaign modal ───────────────────────────────────────────
+const WEEKDAY_NAMES_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function formatRecurrence(r) {
+  if (!r) return '—';
+  if (r.frequency === 'daily') return 'Every day';
+  if (r.frequency === 'monthly') return 'Monthly';
+  if (r.frequency === 'weekly') {
+    const days = (r.daysOfWeek || []).map(d => WEEKDAY_NAMES_SHORT[d]).join(', ');
+    return `Every ${days}`;
+  }
+  return '—';
+}
+
 function CampaignModal({
   campaign,
   onClose
@@ -1709,6 +1727,10 @@ function CampaignModal({
   if (!campaign) return null;
   const sc = STATUS_CARD_COLORS[campaign.status] || STATUS_CARD_COLORS.draft;
   const badge = STATUS_BADGE[campaign.status] || STATUS_BADGE.draft;
+  const fmtD = d => d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+  const detailFields = campaign.type === 'Recurring' && campaign.recurrence
+    ? [['Channel', CHANNELS[campaign.channel]], ['Type', campaign.type], ['Segment', campaign.segment], ['Time', campaign.time || '—'], ['Repeats', formatRecurrence(campaign.recurrence)], ['Until', fmtD(campaign.recurrence.endDate)]]
+    : [['Channel', CHANNELS[campaign.channel]], ['Type', campaign.type], ['Segment', campaign.segment], ['Time', campaign.time || '—'], ['Start', fmtD(campaign.startDate)], ['End', fmtD(campaign.endDate)]];
   return /*#__PURE__*/React.createElement("div", {
     onClick: onClose,
     style: {
@@ -1795,15 +1817,7 @@ function CampaignModal({
       gridTemplateColumns: '1fr 1fr',
       gap: 12
     }
-  }, [['Channel', CHANNELS[campaign.channel]], ['Type', campaign.type], ['Segment', campaign.segment], ['Time', campaign.time || '—'], ['Start', campaign.startDate ? campaign.startDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }) : '—'], ['End', campaign.endDate ? campaign.endDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }) : '—']].map(([k, v]) => /*#__PURE__*/React.createElement("div", {
+  }, detailFields.map(([k, v]) => /*#__PURE__*/React.createElement("div", {
     key: k,
     style: {
       background: '#f9fafb',
@@ -2318,7 +2332,7 @@ function WeekView({
   const N = weekDays.length;
 
   // Split: multi-day spans vs single-day items
-  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || ['Recurring', 'Journey'].includes(c.type);
+  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || c.type === 'Journey';
   const visibleSpans = filtered.filter(c => isMultiDay(c)).filter(c => {
     const last = weekDays[N - 1];
     return c.startDate <= last && c.endDate >= weekDays[0];
@@ -2870,7 +2884,7 @@ function MonthView({
   onCreateClick
 }) {
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || ['Recurring', 'Journey'].includes(c.type);
+  const isMultiDay = c => ['inapp', 'inweb', 'journey'].includes(c.channel) || c.type === 'Journey';
   const allMultiDay = filtered.filter(isMultiDay);
   const getSingleDay = day => filtered.filter(c => !isMultiDay(c) && fmtDate(c.startDate) === fmtDate(day));
   const weeks = Array.from({
@@ -2956,14 +2970,14 @@ function App() {
     length: 42
   }, (_, i) => addDays(calStart, i));
   const today = new Date();
-  const filtered = campaigns.filter(c => {
+  const filtered = expandRecurringCampaigns(campaigns.filter(c => {
     if (c.unscheduled) return false;
     if (filters.status !== 'All' && STATUSES[c.status] !== filters.status) return false;
     if (filters.channel !== 'All' && CHANNELS[c.channel] !== filters.channel) return false;
     if (filters.type !== 'All' && c.type !== filters.type) return false;
     if (filters.segment !== 'All' && c.segment !== filters.segment) return false;
     return true;
-  });
+  }));
   const unscheduled = campaigns.filter(c => c.unscheduled);
   const getCampaignsForDay = day => filtered.filter(c => !c.allDay && fmtDate(c.startDate) === fmtDate(day));
   const getSpanBars = () => {
@@ -3921,7 +3935,7 @@ function App() {
     weekDays: weekDays,
     filtered: filtered,
     today: today,
-    onCampaignClick: setSelectedCampaign,
+    onCampaignClick: c => setSelectedCampaign(c._isRecurringOccurrence ? (campaigns.find(x => x.id === c.id) || c) : c),
     density: density,
     onDrop: handleDrop,
     onResize: handleResize,
@@ -3933,7 +3947,7 @@ function App() {
     monthEnd: monthEnd,
     filtered: filtered,
     today: today,
-    onCampaignClick: setSelectedCampaign,
+    onCampaignClick: c => setSelectedCampaign(c._isRecurringOccurrence ? (campaigns.find(x => x.id === c.id) || c) : c),
     onDrop: handleDrop,
     onResize: handleResize,
     onCreateClick: d => setCreateForDate(d)
@@ -3946,23 +3960,15 @@ function App() {
   }), createForDate && /*#__PURE__*/React.createElement(CreateCampaignModal, {
     defaultDate: createForDate,
     onClose: () => setCreateForDate(null),
-    onCreate: ({
-      name,
-      channel,
-      startDate,
-      sendTime,
-      sto
-    }) => {
-      setCampaigns(prev => [...prev, {
-        id: Date.now(),
-        name,
-        channel,
-        status: 'draft',
-        type: 'Manual send',
-        segment: 'All',
-        unscheduled: true
-      }]);
-      setToast(`"${name}" created and added to Unscheduled`);
+    onCreate: ({ name, channel, startDate, sendTime, sto, campaignType, recurrence }) => {
+      if (campaignType === 'recurring') {
+        const sd = startDate ? new Date(startDate + 'T00:00:00') : new Date();
+        setCampaigns(prev => [...prev, { id: Date.now(), name, channel, status: 'draft', type: 'Recurring', segment: 'All', startDate: sd, recurrence }]);
+        setToast(`"${name}" recurring campaign created`);
+      } else {
+        setCampaigns(prev => [...prev, { id: Date.now(), name, channel, status: 'draft', type: 'Manual send', segment: 'All', unscheduled: true }]);
+        setToast(`"${name}" created and added to Unscheduled`);
+      }
     }
   }), toast && /*#__PURE__*/React.createElement(Toast, {
     msg: toast,
